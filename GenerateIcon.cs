@@ -3,7 +3,6 @@ using System.IO;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Drawing.Text;
 using System.Collections.Generic;
 
 public class GenerateIcon
@@ -16,8 +15,7 @@ public class GenerateIcon
         int[] sizes = new int[] { 256, 128, 64, 48, 32, 16 };
         List<Bitmap> bitmaps = new List<Bitmap>();
 
-        // Generate master at 512 for super-sampled crispness
-        using (Bitmap master = RenderEmblem(512))
+        using (Bitmap master = RenderBleachBadge(512))
         {
             master.Save(outPng, ImageFormat.Png);
 
@@ -44,10 +42,10 @@ public class GenerateIcon
             b.Dispose();
         }
 
-        Console.WriteLine("SUCCESS: Multi-resolution icon saved to " + outIco);
+        Console.WriteLine("SUCCESS: Bleach Shinigami Badge icon saved to " + outIco);
     }
 
-    private static Bitmap RenderEmblem(int size)
+    private static Bitmap RenderBleachBadge(int size)
     {
         Bitmap bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
         using (Graphics g = Graphics.FromImage(bmp))
@@ -55,240 +53,237 @@ public class GenerateIcon
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.Clear(Color.Transparent);
 
             float cx = size / 2f;
             float cy = size / 2f;
 
-            // 1. Ambient Glow Aura behind the emblem
-            using (GraphicsPath glowPath = new GraphicsPath())
+            // 1. Getsuga Tensho Crimson Spiritual Pressure (Reiatsu) Aura
+            using (GraphicsPath reiatsuPath = new GraphicsPath())
             {
-                glowPath.AddEllipse(cx - 210, cy - 210, 420, 420);
-                using (PathGradientBrush pgb = new PathGradientBrush(glowPath))
+                reiatsuPath.AddEllipse(cx - 220, cy - 220, 440, 440);
+                using (PathGradientBrush pgb = new PathGradientBrush(reiatsuPath))
                 {
-                    pgb.CenterColor = Color.FromArgb(70, 0, 240, 255);
-                    pgb.SurroundColors = new Color[] { Color.FromArgb(0, 0, 240, 255) };
-                    g.FillEllipse(pgb, cx - 210, cy - 210, 420, 420);
+                    pgb.CenterColor = Color.FromArgb(160, 225, 29, 72); // Crimson blood
+                    pgb.SurroundColors = new Color[] { Color.FromArgb(0, 225, 29, 72) };
+                    g.FillEllipse(pgb, cx - 220, cy - 220, 440, 440);
                 }
             }
 
-            // 2. Chamfered Cyber-Shield Hexagon/Octagon Chassis
-            float pad = 36f;
-            float chamfer = 60f;
-            PointF[] shield = new PointF[]
+            // Reiatsu flame wisps (Outer spiritual spikes)
+            for (int i = 0; i < 16; i++)
             {
-                new PointF(pad + chamfer, pad),
-                new PointF(size - pad - chamfer, pad),
-                new PointF(size - pad, pad + chamfer),
-                new PointF(size - pad, size - pad - chamfer),
-                new PointF(size - pad - chamfer, size - pad),
-                new PointF(pad + chamfer, size - pad),
-                new PointF(pad, size - pad - chamfer),
-                new PointF(pad, pad + chamfer)
+                double angle = i * (Math.PI / 8.0);
+                float r1 = 180f;
+                float r2 = 230f;
+                float fx = cx + (float)(Math.Sin(angle) * r2);
+                float fy = cy - (float)(Math.Cos(angle) * r2);
+                using (Pen flamePen = new Pen(Color.FromArgb(50, 255, 85, 0), 6f)) // Reiatsu orange
+                {
+                    flamePen.StartCap = LineCap.Round;
+                    flamePen.EndCap = LineCap.Round;
+                    g.DrawLine(flamePen, cx + (float)(Math.Sin(angle) * r1), cy - (float)(Math.Cos(angle) * r1), fx, fy);
+                }
+            }
+
+            // 2. Top Cord Suspension Ring (Tassel Ring of Daikōshō)
+            float ringY = 56f;
+            using (Pen cordPen = new Pen(Color.FromArgb(255, 225, 29, 72), 7f))
+            {
+                g.DrawEllipse(cordPen, cx - 28, ringY - 28, 56, 56);
+            }
+            using (SolidBrush knotBrush = new SolidBrush(Color.FromArgb(255, 180, 20, 50)))
+            {
+                g.FillEllipse(knotBrush, cx - 14, ringY + 12, 28, 20);
+            }
+
+            // 3. Substitute Shinigami Badge (代行証) Pentagonal Tablet
+            PointF[] badge = new PointF[]
+            {
+                new PointF(cx - 105, 82),      // Top Left
+                new PointF(cx + 105, 82),      // Top Right
+                new PointF(cx + 165, 145),     // Upper Shoulder Right
+                new PointF(cx + 165, 315),     // Waist Right
+                new PointF(cx, 460),           // Bottom Tip (V-shape)
+                new PointF(cx - 165, 315),     // Waist Left
+                new PointF(cx - 165, 145)      // Upper Shoulder Left
             };
 
-            // Chassis Background: Deep Obsidian with gradient
-            using (GraphicsPath shieldPath = new GraphicsPath())
+            using (GraphicsPath badgePath = new GraphicsPath())
             {
-                shieldPath.AddPolygon(shield);
+                badgePath.AddPolygon(badge);
+
+                // Badge Body Gradient: Deep Soul Society Obsidian / Ebony Wood
                 using (LinearGradientBrush lgb = new LinearGradientBrush(
-                    new PointF(0, pad), new PointF(0, size - pad),
-                    Color.FromArgb(250, 10, 14, 22), Color.FromArgb(255, 4, 6, 10)))
+                    new PointF(cx, 80), new PointF(cx, 460),
+                    Color.FromArgb(255, 22, 24, 34), Color.FromArgb(255, 8, 9, 14)))
                 {
-                    g.FillPath(lgb, shieldPath);
+                    g.FillPath(lgb, badgePath);
                 }
 
-                // Inner carbon lines (horizontal telemetry scanlines)
-                using (Pen scanPen = new Pen(Color.FromArgb(20, 0, 240, 255), 1.5f))
+                // Outer Glowing Border (Blood Crimson)
+                using (Pen borderPen = new Pen(Color.FromArgb(255, 225, 29, 72), 6f))
                 {
-                    for (float y = pad + 20; y < size - pad - 10; y += 16)
+                    borderPen.LineJoin = LineJoin.Round;
+                    g.DrawPath(borderPen, badgePath);
+                }
+            }
+
+            // Inner Carved Inset (Gold / Amber Rim)
+            PointF[] innerBadge = new PointF[]
+            {
+                new PointF(cx - 92, 98),
+                new PointF(cx + 92, 98),
+                new PointF(cx + 146, 154),
+                new PointF(cx + 146, 305),
+                new PointF(cx, 436),
+                new PointF(cx - 146, 305),
+                new PointF(cx - 146, 154)
+            };
+            using (GraphicsPath innerPath = new GraphicsPath())
+            {
+                innerPath.AddPolygon(innerBadge);
+                using (Pen rimPen = new Pen(Color.FromArgb(200, 245, 158, 11), 3f)) // Soul Reaper Gold
+                {
+                    rimPen.LineJoin = LineJoin.Round;
+                    g.DrawPath(rimPen, innerPath);
+                }
+            }
+
+            // 4. Center Shinigami Skull Crest (The Iconic Substitute Soul Reaper Emblem)
+            float skullCy = cy + 5;
+
+            // Cranium (Head dome)
+            using (SolidBrush boneBrush = new SolidBrush(Color.FromArgb(250, 248, 250, 252))) // Bone white
+            {
+                // Upper Cranium Dome
+                g.FillPie(boneBrush, cx - 76, skullCy - 105, 152, 135, 180, 180);
+
+                // Lower Face / Cheekbones
+                PointF[] face = new PointF[]
+                {
+                    new PointF(cx - 76, skullCy - 38),
+                    new PointF(cx + 76, skullCy - 38),
+                    new PointF(cx + 56, skullCy + 45),
+                    new PointF(cx + 38, skullCy + 82),  // Jaw right
+                    new PointF(cx - 38, skullCy + 82),  // Jaw left
+                    new PointF(cx - 56, skullCy + 45)
+                };
+                g.FillPolygon(boneBrush, face);
+
+                // Forehead Crest Diamond (Soul Reaper mark)
+                PointF[] crest = new PointF[]
+                {
+                    new PointF(cx, skullCy - 118),
+                    new PointF(cx + 14, skullCy - 96),
+                    new PointF(cx, skullCy - 74),
+                    new PointF(cx - 14, skullCy - 96)
+                };
+                using (SolidBrush crimsonCrest = new SolidBrush(Color.FromArgb(255, 225, 29, 72)))
+                {
+                    g.FillPolygon(crimsonCrest, crest);
+                }
+
+                // Eye Sockets (Deep Void with Crimson Reiatsu)
+                using (GraphicsPath eyeL = new GraphicsPath())
+                {
+                    eyeL.AddPolygon(new PointF[] {
+                        new PointF(cx - 52, skullCy - 30),
+                        new PointF(cx - 14, skullCy - 16),
+                        new PointF(cx - 22, skullCy + 14),
+                        new PointF(cx - 56, skullCy - 2)
+                    });
+                    using (SolidBrush eyeBrush = new SolidBrush(Color.FromArgb(255, 12, 14, 20)))
                     {
-                        g.DrawLine(scanPen, pad + 15, y, size - pad - 15, y);
+                        g.FillPath(eyeBrush, eyeL);
+                    }
+                    using (Pen eyeGlow = new Pen(Color.FromArgb(200, 225, 29, 72), 2.5f))
+                    {
+                        g.DrawPath(eyeGlow, eyeL);
                     }
                 }
 
-                // High-voltage Neon Cyan Border
-                using (Pen glowPen = new Pen(Color.FromArgb(60, 0, 240, 255), 14f))
+                using (GraphicsPath eyeR = new GraphicsPath())
                 {
-                    glowPen.LineJoin = LineJoin.Round;
-                    g.DrawPath(glowPen, shieldPath);
+                    eyeR.AddPolygon(new PointF[] {
+                        new PointF(cx + 52, skullCy - 30),
+                        new PointF(cx + 14, skullCy - 16),
+                        new PointF(cx + 22, skullCy + 14),
+                        new PointF(cx + 56, skullCy - 2)
+                    });
+                    using (SolidBrush eyeBrush = new SolidBrush(Color.FromArgb(255, 12, 14, 20)))
+                    {
+                        g.FillPath(eyeBrush, eyeR);
+                    }
+                    using (Pen eyeGlow = new Pen(Color.FromArgb(200, 225, 29, 72), 2.5f))
+                    {
+                        g.DrawPath(eyeGlow, eyeR);
+                    }
                 }
-                using (Pen borderPen = new Pen(Color.FromArgb(255, 0, 240, 255), 5.5f))
+
+                // Nasal Cavity (Inverted Triangle)
+                PointF[] nose = new PointF[]
                 {
-                    borderPen.LineJoin = LineJoin.Miter;
-                    g.DrawPath(borderPen, shieldPath);
+                    new PointF(cx, skullCy + 6),
+                    new PointF(cx + 9, skullCy + 26),
+                    new PointF(cx - 9, skullCy + 26)
+                };
+                using (SolidBrush voidBrush = new SolidBrush(Color.FromArgb(255, 12, 14, 20)))
+                {
+                    g.FillPolygon(voidBrush, nose);
                 }
-            }
 
-            // 3. Cyber Yellow Corner Reinforcements
-            float bLen = 28f;
-            using (Pen yellowPen = new Pen(Color.FromArgb(255, 255, 230, 0), 4.5f))
-            {
-                yellowPen.StartCap = LineCap.Square;
-                yellowPen.EndCap = LineCap.Square;
-
-                // Top-Left Chamfer
-                g.DrawLine(yellowPen, pad + chamfer - bLen, pad, pad + chamfer + bLen, pad);
-                // Top-Right Chamfer
-                g.DrawLine(yellowPen, size - pad - chamfer - bLen, pad, size - pad - chamfer + bLen, pad);
-                // Bottom-Left Chamfer
-                g.DrawLine(yellowPen, pad + chamfer - bLen, size - pad, pad + chamfer + bLen, size - pad);
-                // Bottom-Right Chamfer
-                g.DrawLine(yellowPen, size - pad - chamfer - bLen, size - pad, size - pad - chamfer + bLen, size - pad);
-            }
-
-            // 4. Circular Chrono Bezel & Telemetry Ring
-            float rOuter = 160f;
-            using (Pen ringPen = new Pen(Color.FromArgb(50, 0, 240, 255), 2f))
-            {
-                g.DrawEllipse(ringPen, cx - rOuter, cy - rOuter, rOuter * 2, rOuter * 2);
-            }
-
-            float rBezel = 142f;
-            using (Pen bezelPen = new Pen(Color.FromArgb(120, 0, 240, 255), 3f))
-            {
-                g.DrawEllipse(bezelPen, cx - rBezel, cy - rBezel, rBezel * 2, rBezel * 2);
-            }
-
-            // 12 Chronometer Ticks around dial
-            for (int i = 0; i < 12; i++)
-            {
-                double angle = i * (Math.PI / 6.0);
-                bool isMajor = (i % 3 == 0); // 12, 3, 6, 9
-                float tickLen = isMajor ? 20f : 10f;
-                float r1 = rBezel - 2f;
-                float r2 = r1 - tickLen;
-
-                float x1 = cx + (float)(Math.Sin(angle) * r1);
-                float y1 = cy - (float)(Math.Cos(angle) * r1);
-                float x2 = cx + (float)(Math.Sin(angle) * r2);
-                float y2 = cy - (float)(Math.Cos(angle) * r2);
-
-                Color tCol = isMajor ? Color.FromArgb(255, 255, 230, 0) : Color.FromArgb(200, 0, 240, 255);
-                float tWidth = isMajor ? 4.5f : 2.5f;
-
-                using (Pen tp = new Pen(tCol, tWidth))
+                // Teeth / Jaw Slits (4 distinct vertical slits)
+                using (Pen teethPen = new Pen(Color.FromArgb(255, 12, 14, 20), 4f))
                 {
-                    tp.StartCap = LineCap.Flat;
-                    tp.EndCap = LineCap.Flat;
-                    g.DrawLine(tp, x1, y1, x2, y2);
+                    teethPen.StartCap = LineCap.Round;
+                    teethPen.EndCap = LineCap.Round;
+                    g.DrawLine(teethPen, cx - 22, skullCy + 48, cx - 22, skullCy + 72);
+                    g.DrawLine(teethPen, cx - 7, skullCy + 48, cx - 7, skullCy + 75);
+                    g.DrawLine(teethPen, cx + 7, skullCy + 48, cx + 7, skullCy + 75);
+                    g.DrawLine(teethPen, cx + 22, skullCy + 48, cx + 22, skullCy + 72);
+                }
+
+                // Horizontal Teeth Divider
+                using (Pen hLine = new Pen(Color.FromArgb(255, 12, 14, 20), 2.5f))
+                {
+                    g.DrawLine(hLine, cx - 28, skullCy + 60, cx + 28, skullCy + 60);
                 }
             }
 
-            // Sub-ticks (60-second micro pips)
-            for (int s = 0; s < 60; s++)
+            // 5. Stylized Tensa Zangetsu Crossguard / Manji Flanks (Bankai energy marks)
+            using (Pen bankaiPen = new Pen(Color.FromArgb(180, 225, 29, 72), 3f))
             {
-                if (s % 5 == 0) continue; // skip major ticks
-                double angle = s * (Math.PI / 30.0);
-                float r1 = rBezel - 2f;
-                float r2 = r1 - 4f;
+                // Left flank markings
+                g.DrawLine(bankaiPen, cx - 110, skullCy - 60, cx - 110, skullCy + 60);
+                g.DrawLine(bankaiPen, cx - 130, skullCy - 20, cx - 90, skullCy - 20);
+                g.DrawLine(bankaiPen, cx - 130, skullCy + 20, cx - 90, skullCy + 20);
 
-                float x1 = cx + (float)(Math.Sin(angle) * r1);
-                float y1 = cy - (float)(Math.Cos(angle) * r1);
-                float x2 = cx + (float)(Math.Sin(angle) * r2);
-                float y2 = cy - (float)(Math.Cos(angle) * r2);
-
-                using (Pen sp = new Pen(Color.FromArgb(80, 0, 240, 255), 1.5f))
-                {
-                    g.DrawLine(sp, x1, y1, x2, y2);
-                }
+                // Right flank markings
+                g.DrawLine(bankaiPen, cx + 110, skullCy - 60, cx + 110, skullCy + 60);
+                g.DrawLine(bankaiPen, cx + 90, skullCy - 20, cx + 130, skullCy - 20);
+                g.DrawLine(bankaiPen, cx + 90, skullCy + 20, cx + 130, skullCy + 20);
             }
 
-            // 5. Crosshair Guides
-            using (Pen chPen = new Pen(Color.FromArgb(40, 0, 240, 255), 1.5f))
+            // 6. Bottom Kanji-inspired Soul Reaper Carving: "代行" (Daikō - Substitute)
+            // Left character "代"
+            using (Pen kanjiPen = new Pen(Color.FromArgb(230, 245, 158, 11), 3.5f))
             {
-                chPen.DashStyle = DashStyle.Dash;
-                g.DrawLine(chPen, cx - rBezel + 24, cy, cx + rBezel - 24, cy);
-                g.DrawLine(chPen, cx, cy - rBezel + 24, cx, cy + rBezel - 24);
-            }
+                kanjiPen.StartCap = LineCap.Round;
+                kanjiPen.EndCap = LineCap.Round;
 
-            // 6. High-Tech Cyber Hands (Hour hand at 10:00, Minute hand at 02:00)
-            // Hour Hand (10:00 = 300 deg)
-            double hAngle = 300 * Math.PI / 180.0;
-            float hLen = 78f;
-            PointF hTip = new PointF(cx + (float)(Math.Sin(hAngle) * hLen), cy - (float)(Math.Cos(hAngle) * hLen));
-            PointF hLeft = new PointF(cx + (float)(Math.Sin(hAngle - Math.PI / 2) * 9), cy - (float)(Math.Cos(hAngle - Math.PI / 2) * 9));
-            PointF hRight = new PointF(cx + (float)(Math.Sin(hAngle + Math.PI / 2) * 9), cy - (float)(Math.Cos(hAngle + Math.PI / 2) * 9));
-            PointF hTail = new PointF(cx - (float)(Math.Sin(hAngle) * 18), cy + (float)(Math.Cos(hAngle) * 18));
+                // Left wing: "代"
+                g.DrawLine(kanjiPen, cx - 55, 360, cx - 45, 395); // left stroke
+                g.DrawLine(kanjiPen, cx - 50, 375, cx - 25, 375); // horiz
+                g.DrawLine(kanjiPen, cx - 35, 360, cx - 35, 400); // vert
+                g.DrawLine(kanjiPen, cx - 25, 362, cx - 25, 368); // dot
 
-            GraphicsPath hPath = new GraphicsPath();
-            hPath.AddPolygon(new PointF[] { hTip, hRight, hTail, hLeft });
-            using (SolidBrush hBrush = new SolidBrush(Color.FromArgb(255, 255, 230, 0))) // Cyber Yellow
-            {
-                g.FillPath(hBrush, hPath);
-            }
-            using (Pen hBorder = new Pen(Color.FromArgb(255, 255, 255, 120), 1.5f))
-            {
-                g.DrawPath(hBorder, hPath);
-            }
-
-            // Minute Hand (02:00 = 60 deg)
-            double mAngle = 60 * Math.PI / 180.0;
-            float mLen = 112f;
-            PointF mTip = new PointF(cx + (float)(Math.Sin(mAngle) * mLen), cy - (float)(Math.Cos(mAngle) * mLen));
-            PointF mLeft = new PointF(cx + (float)(Math.Sin(mAngle - Math.PI / 2) * 7.5), cy - (float)(Math.Cos(mAngle - Math.PI / 2) * 7.5));
-            PointF mRight = new PointF(cx + (float)(Math.Sin(mAngle + Math.PI / 2) * 7.5), cy - (float)(Math.Cos(mAngle + Math.PI / 2) * 7.5));
-            PointF mTail = new PointF(cx - (float)(Math.Sin(mAngle) * 24), cy + (float)(Math.Cos(mAngle) * 24));
-
-            GraphicsPath mPath = new GraphicsPath();
-            mPath.AddPolygon(new PointF[] { mTip, mRight, mTail, mLeft });
-            using (SolidBrush mBrush = new SolidBrush(Color.FromArgb(255, 255, 230, 0)))
-            {
-                g.FillPath(mBrush, mPath);
-            }
-            using (Pen mBorder = new Pen(Color.FromArgb(255, 255, 255, 120), 1.5f))
-            {
-                g.DrawPath(mBorder, mPath);
-            }
-
-            // Second Needle (Pointing down at 180 deg = 30s)
-            float sLen = 118f;
-            using (Pen secPen = new Pen(Color.FromArgb(255, 0, 240, 255), 2.5f))
-            {
-                g.DrawLine(secPen, cx, cy - 20, cx, cy + sLen);
-            }
-            using (SolidBrush secTipBrush = new SolidBrush(Color.FromArgb(255, 0, 240, 255)))
-            {
-                g.FillEllipse(secTipBrush, cx - 4, cy + sLen - 6, 8, 8);
-            }
-
-            // 7. Center Reactor Pin (Multi-layered cyber jewel)
-            using (SolidBrush ringDark = new SolidBrush(Color.FromArgb(255, 10, 14, 22)))
-            {
-                g.FillEllipse(ringDark, cx - 18, cy - 18, 36, 36);
-            }
-            using (Pen ringCyan = new Pen(Color.FromArgb(255, 0, 240, 255), 3f))
-            {
-                g.DrawEllipse(ringCyan, cx - 18, cy - 18, 36, 36);
-            }
-            using (SolidBrush yellowPin = new SolidBrush(Color.FromArgb(255, 255, 230, 0)))
-            {
-                g.FillEllipse(yellowPin, cx - 8, cy - 8, 16, 16);
-            }
-            using (SolidBrush whiteCore = new SolidBrush(Color.White))
-            {
-                g.FillEllipse(whiteCore, cx - 3.5f, cy - 3.5f, 7, 7);
-            }
-
-            // 8. Cyberpunk HUD Reticle Brackets `[ ` and ` ]` on flanks
-            using (Font fBracket = new Font("Consolas", 32, FontStyle.Bold))
-            using (SolidBrush brkBrush = new SolidBrush(Color.FromArgb(220, 0, 240, 255)))
-            {
-                StringFormat sfL = new StringFormat { Alignment = StringAlignment.Far, LineAlignment = StringAlignment.Center };
-                StringFormat sfR = new StringFormat { Alignment = StringAlignment.Near, LineAlignment = StringAlignment.Center };
-                g.DrawString("[", fBracket, brkBrush, cx - rBezel + 14, cy - 2, sfL);
-                g.DrawString("]", fBracket, brkBrush, cx + rBezel - 14, cy - 2, sfR);
-            }
-
-            // 9. Telemetry Markings: "2077" at bottom and "SYS" at top
-            using (Font fTele = new Font("Consolas", 15, FontStyle.Bold))
-            using (SolidBrush teleYellow = new SolidBrush(Color.FromArgb(255, 255, 230, 0)))
-            using (SolidBrush teleCyan = new SolidBrush(Color.FromArgb(220, 0, 240, 255)))
-            {
-                StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                g.DrawString("// 2077 //", fTele, teleYellow, cx, size - pad - 26, sf);
-                g.DrawString("CHRONO", fTele, teleCyan, cx, pad + 24, sf);
+                // Right wing: "行"
+                g.DrawLine(kanjiPen, cx + 25, 360, cx + 35, 375); // top left
+                g.DrawLine(kanjiPen, cx + 30, 378, cx + 30, 402); // vert left
+                g.DrawLine(kanjiPen, cx + 45, 362, cx + 62, 362); // top horiz
+                g.DrawLine(kanjiPen, cx + 42, 375, cx + 65, 375); // mid horiz
+                g.DrawLine(kanjiPen, cx + 55, 375, cx + 55, 405); // vert hook
             }
         }
         return bmp;
@@ -299,10 +294,9 @@ public class GenerateIcon
         using (FileStream fs = new FileStream(path, FileMode.Create))
         using (BinaryWriter bw = new BinaryWriter(fs))
         {
-            // ICONDIR Header
-            bw.Write((short)0); // Reserved
-            bw.Write((short)1); // Type 1 = Icon
-            bw.Write((short)bitmaps.Count); // Count
+            bw.Write((short)0);
+            bw.Write((short)1);
+            bw.Write((short)bitmaps.Count);
 
             List<byte[]> pngBytes = new List<byte[]>();
             foreach (Bitmap b in bitmaps)
@@ -325,10 +319,10 @@ public class GenerateIcon
 
                 bw.Write(w);
                 bw.Write(h);
-                bw.Write((byte)0); // Color count
-                bw.Write((byte)0); // Reserved
-                bw.Write((short)1); // Color planes
-                bw.Write((short)32); // Bits per pixel
+                bw.Write((byte)0);
+                bw.Write((byte)0);
+                bw.Write((short)1);
+                bw.Write((short)32);
                 bw.Write((int)data.Length);
                 bw.Write((int)offset);
 

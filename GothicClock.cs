@@ -283,19 +283,15 @@ namespace GothicClock
         public bool IsMoveMode = false;
         public bool StayOnDesktop = true;
 
-        // Gothic Visual FX & Aura
-        public string GlowTheme = "NightCity";
+        // Bleach Gothic Visual FX & Spiritual Reiatsu Aura
+        public string GlowTheme = "Getsuga";
         public double GlowRadius = 18;
-        public double GlowOpacity = 0.85;
+        public double GlowOpacity = 0.90;
         public string MotionStyle = "Spring";
         public string ColonStyle = "Breath";
         public bool ShowDivider = true;
         public bool ShowGlassBackplate = false;
-        public bool ShowCyberHud = true;
 
-        private TextBlock txtHudBracketLeft;
-        private TextBlock txtHudBracketRight;
-        private TextBlock txtHudTelemetry;
         private Grid dividerGrid;
         private System.Windows.Shapes.Polygon diamondCenter;
         private System.Windows.Shapes.Rectangle lineLeft;
@@ -436,34 +432,12 @@ namespace GothicClock
             BoxAmPm = new RollingBox(gothicFont, TimeFontSize, textBrush, shadow);
             BoxAmPm.Container.Margin = new Thickness(6, 0, 0, 0);
 
-            txtHudBracketLeft = new TextBlock();
-            txtHudBracketLeft.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
-            txtHudBracketLeft.FontSize = TimeFontSize * 0.85;
-            txtHudBracketLeft.FontWeight = FontWeights.Bold;
-            txtHudBracketLeft.Foreground = textBrush;
-            txtHudBracketLeft.Text = "[ ";
-            txtHudBracketLeft.VerticalAlignment = VerticalAlignment.Center;
-            txtHudBracketLeft.Margin = new Thickness(0, 0, 4, 0);
-            txtHudBracketLeft.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
-
-            txtHudBracketRight = new TextBlock();
-            txtHudBracketRight.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
-            txtHudBracketRight.FontSize = TimeFontSize * 0.85;
-            txtHudBracketRight.FontWeight = FontWeights.Bold;
-            txtHudBracketRight.Foreground = textBrush;
-            txtHudBracketRight.Text = " ]";
-            txtHudBracketRight.VerticalAlignment = VerticalAlignment.Center;
-            txtHudBracketRight.Margin = new Thickness(4, 0, 0, 0);
-            txtHudBracketRight.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
-
-            timePanel.Children.Add(txtHudBracketLeft);
             timePanel.Children.Add(BoxHour.Container);
             timePanel.Children.Add(txtColon1);
             timePanel.Children.Add(BoxMin.Container);
             timePanel.Children.Add(txtColon2);
             timePanel.Children.Add(BoxSec.Container);
             timePanel.Children.Add(BoxAmPm.Container);
-            timePanel.Children.Add(txtHudBracketRight);
 
             // Ornate Divider
             BuildDivider();
@@ -476,21 +450,10 @@ namespace GothicClock
 
             BoxDate = new RollingBox(gothicFont, DateFontSize, textBrush, shadow);
 
-            txtHudTelemetry = new TextBlock();
-            txtHudTelemetry.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
-            txtHudTelemetry.FontSize = 9.5;
-            txtHudTelemetry.FontWeight = FontWeights.Bold;
-            txtHudTelemetry.Foreground = textBrush;
-            txtHudTelemetry.Text = "// ARASAKA_SYS_2077 // NIGHT_CITY //";
-            txtHudTelemetry.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-            txtHudTelemetry.Margin = new Thickness(0, 4, 0, 0);
-            txtHudTelemetry.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
-
             stack.Children.Add(timePanel);
             stack.Children.Add(dividerGrid);
             stack.Children.Add(BoxDay.Container);
             stack.Children.Add(BoxDate.Container);
-            stack.Children.Add(txtHudTelemetry);
 
             mainBorder = new Border();
             mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
@@ -519,55 +482,57 @@ namespace GothicClock
             SolidColorBrush textBrush;
             System.Windows.Media.Color glowColor;
 
-            if (theme == "NightCity" || theme == "Cyberpunk")
+            if (theme == "Getsuga" || theme == "GetsugaTensho" || theme == "Crimson")
             {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0)); // Cyberpunk Yellow
-                glowColor = System.Windows.Media.Color.FromRgb(0, 240, 255); // High-voltage Cyan
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255)); // Pure Soul Bone White
+                glowColor = System.Windows.Media.Color.FromRgb(225, 29, 72); // Crimson Blood Reiatsu
                 if (GlowRadius < 8) GlowRadius = 18;
             }
-            else if (theme == "Edgerunners")
+            else if (theme == "Bankai" || theme == "TensaZangetsu")
             {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 0, 127)); // Hot Neon Pink
-                glowColor = System.Windows.Media.Color.FromRgb(157, 0, 255); // Ultra Violet
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255)); // Stark White
+                glowColor = System.Windows.Media.Color.FromRgb(15, 15, 22); // Pitch Void Reiatsu Shadow
+                if (GlowRadius < 8) GlowRadius = 14;
+            }
+            else if (theme == "Hollow" || theme == "HollowMask")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)); // Hollow Bone White
+                glowColor = System.Windows.Media.Color.FromRgb(153, 27, 27); // Dark Crimson Reiatsu
                 if (GlowRadius < 8) GlowRadius = 18;
             }
-            else if (theme == "Matrix")
+            else if (theme == "Ichigo" || theme == "ReiatsuFlame")
             {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 102)); // Phosphor Green
-                glowColor = System.Windows.Media.Color.FromRgb(0, 255, 102); // Radioactive Green
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 250, 220)); // Radiant Light
+                glowColor = System.Windows.Media.Color.FromRgb(234, 88, 12); // Flame Reiatsu Orange
+                if (GlowRadius < 8) GlowRadius = 20;
+            }
+            else if (theme == "Quincy" || theme == "Sternritter")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 249, 255)); // Spirit Silver
+                glowColor = System.Windows.Media.Color.FromRgb(2, 132, 199); // Sacred Quincy Blue
                 if (GlowRadius < 8) GlowRadius = 18;
             }
-            else if (theme == "IceRunner" || theme == "Cyan")
+            else if (theme == "Cero" || theme == "CeroOscuras")
             {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255)); // Electric Cyan
-                glowColor = System.Windows.Media.Color.FromRgb(0, 112, 243); // Sapphire Blue
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(236, 253, 245)); // Spectral White
+                glowColor = System.Windows.Media.Color.FromRgb(16, 185, 129); // Emerald Cero
+                if (GlowRadius < 8) GlowRadius = 20;
+            }
+            else if (theme == "Senbonzakura")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 241, 242));
+                glowColor = System.Windows.Media.Color.FromRgb(244, 63, 94); // Cherry Blossom
                 if (GlowRadius < 8) GlowRadius = 18;
             }
-            else if (theme == "Kiroshi" || theme == "Crimson")
-            {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 30, 70)); // Combat Red
-                glowColor = System.Windows.Media.Color.FromRgb(255, 0, 60); // Blood Crimson
-                if (GlowRadius < 8) GlowRadius = 18;
-            }
-            else if (theme == "Gold")
-            {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 253, 240));
-                glowColor = System.Windows.Media.Color.FromRgb(255, 184, 0);
-            }
-            else if (theme == "Stealth")
-            {
-                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(242, 245, 245));
-                glowColor = Colors.Black;
-            }
-            else // "Chrome" or "Moonlight"
+            else // "Moonlight"
             {
                 textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
-                glowColor = System.Windows.Media.Color.FromRgb(150, 180, 215);
+                glowColor = System.Windows.Media.Color.FromRgb(148, 163, 184); // Moonlight Silver
             }
 
-            double depth = (theme == "Stealth") ? 1.5 : 0;
-            double op = (theme == "Stealth") ? 0.9 : GlowOpacity;
-            double rad = (theme == "Stealth" && GlowRadius > 6) ? 3 : GlowRadius;
+            double depth = (theme == "Bankai") ? 2.0 : 0;
+            double op = (theme == "Bankai") ? 0.95 : GlowOpacity;
+            double rad = (theme == "Bankai" && GlowRadius > 14) ? 14 : GlowRadius;
 
             BoxHour.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
             BoxMin.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
@@ -591,16 +556,6 @@ namespace GothicClock
             cEff2.ShadowDepth = depth;
             cEff2.Opacity = op;
             txtColon2.Effect = cEff2;
-
-            if (txtHudBracketLeft != null)
-            {
-                txtHudBracketLeft.Foreground = new SolidColorBrush(glowColor);
-                txtHudBracketLeft.Effect = cEff1;
-                txtHudBracketRight.Foreground = new SolidColorBrush(glowColor);
-                txtHudBracketRight.Effect = cEff1;
-                txtHudTelemetry.Foreground = new SolidColorBrush(glowColor);
-                txtHudTelemetry.Effect = cEff1;
-            }
 
             UpdateDividerColors(textBrush, glowColor);
         }
@@ -665,15 +620,6 @@ namespace GothicClock
 
             BoxDay.SetFontSize(DayFontSize);
             BoxDate.SetFontSize(DateFontSize);
-
-            if (txtHudBracketLeft != null)
-            {
-                txtHudBracketLeft.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
-                txtHudBracketRight.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
-                txtHudTelemetry.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
-                txtHudBracketLeft.FontSize = TimeFontSize * 0.85;
-                txtHudBracketRight.FontSize = TimeFontSize * 0.85;
-            }
 
             dividerGrid.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
             BoxDay.Container.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
@@ -880,7 +826,6 @@ namespace GothicClock
         private System.Windows.Controls.ComboBox cmbColonStyle;
         private System.Windows.Controls.CheckBox chkShowDivider;
         private System.Windows.Controls.CheckBox chkGlassPlate;
-        private System.Windows.Controls.CheckBox chkCyberHud;
 
         // Element 1: Time
         private System.Windows.Controls.CheckBox chkShowTime;
@@ -945,13 +890,13 @@ namespace GothicClock
                     <Setter Property=""Template"">
                         <Setter.Value>
                             <ControlTemplate TargetType=""ScrollBar"">
-                                <Grid Background=""#090B10"">
+                                <Grid Background=""#08080C"">
                                     <Track x:Name=""PART_Track"" IsDirectionReversed=""True"">
                                         <Track.Thumb>
                                             <Thumb>
                                                 <Thumb.Template>
                                                     <ControlTemplate TargetType=""Thumb"">
-                                                        <Border Background=""#00F0FF"" CornerRadius=""1"" Opacity=""0.8"" />
+                                                        <Border Background=""#E11D48"" CornerRadius=""1"" Opacity=""0.85"" />
                                                     </ControlTemplate>
                                                 </Thumb.Template>
                                             </Thumb>
@@ -969,16 +914,16 @@ namespace GothicClock
                         <Setter.Value>
                             <ControlTemplate TargetType=""Slider"">
                                 <Grid VerticalAlignment=""Center"">
-                                    <Border Height=""4"" Background=""#121624"" BorderBrush=""#1E283E"" BorderThickness=""1"" CornerRadius=""1"" />
+                                    <Border Height=""4"" Background=""#12121A"" BorderBrush=""#251820"" BorderThickness=""1"" CornerRadius=""1"" />
                                     <Track x:Name=""PART_Track"">
                                         <Track.Thumb>
                                             <Thumb Cursor=""Hand"">
                                                 <Thumb.Template>
                                                     <ControlTemplate TargetType=""Thumb"">
                                                         <Grid Width=""14"" Height=""14"">
-                                                            <Border Background=""#FFE600"" BorderBrush=""#00F0FF"" BorderThickness=""1.5"" CornerRadius=""2"">
+                                                            <Border Background=""#FFFFFF"" BorderBrush=""#E11D48"" BorderThickness=""1.5"" CornerRadius=""2"">
                                                                 <Border.Effect>
-                                                                    <DropShadowEffect Color=""#00F0FF"" BlurRadius=""6"" ShadowDepth=""0"" Opacity=""0.9"" />
+                                                                    <DropShadowEffect Color=""#E11D48"" BlurRadius=""8"" ShadowDepth=""0"" Opacity=""0.95"" />
                                                                 </Border.Effect>
                                                             </Border>
                                                         </Grid>
@@ -995,8 +940,8 @@ namespace GothicClock
 
                 <Style TargetType=""ComboBoxItem"">
                     <Setter Property=""SnapsToDevicePixels"" Value=""True"" />
-                    <Setter Property=""Foreground"" Value=""#C8D8ED"" />
-                    <Setter Property=""Background"" Value=""#090B12"" />
+                    <Setter Property=""Foreground"" Value=""#E2E8F0"" />
+                    <Setter Property=""Background"" Value=""#09090E"" />
                     <Setter Property=""FontFamily"" Value=""Consolas, monospace"" />
                     <Setter Property=""FontSize"" Value=""11"" />
                     <Setter Property=""Padding"" Value=""10,6,10,6"" />
@@ -1012,14 +957,14 @@ namespace GothicClock
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property=""IsHighlighted"" Value=""True"">
-                                        <Setter TargetName=""ItemBorder"" Property=""Background"" Value=""#162035"" />
-                                        <Setter TargetName=""ItemBorder"" Property=""BorderBrush"" Value=""#00F0FF"" />
-                                        <Setter Property=""Foreground"" Value=""#FFE600"" />
+                                        <Setter TargetName=""ItemBorder"" Property=""Background"" Value=""#200D15"" />
+                                        <Setter TargetName=""ItemBorder"" Property=""BorderBrush"" Value=""#E11D48"" />
+                                        <Setter Property=""Foreground"" Value=""#FF1E46"" />
                                     </Trigger>
                                     <Trigger Property=""IsSelected"" Value=""True"">
-                                        <Setter TargetName=""ItemBorder"" Property=""Background"" Value=""#1A2844"" />
-                                        <Setter TargetName=""ItemBorder"" Property=""BorderBrush"" Value=""#FFE600"" />
-                                        <Setter Property=""Foreground"" Value=""#00F0FF"" />
+                                        <Setter TargetName=""ItemBorder"" Property=""Background"" Value=""#2D101C"" />
+                                        <Setter TargetName=""ItemBorder"" Property=""BorderBrush"" Value=""#E11D48"" />
+                                        <Setter Property=""Foreground"" Value=""#FFFFFF"" />
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -1028,7 +973,7 @@ namespace GothicClock
                 </Style>
 
                 <Style TargetType=""ComboBox"">
-                    <Setter Property=""Foreground"" Value=""#00F0FF"" />
+                    <Setter Property=""Foreground"" Value=""#F8FAFC"" />
                     <Setter Property=""FontFamily"" Value=""Consolas, monospace"" />
                     <Setter Property=""FontSize"" Value=""11"" />
                     <Setter Property=""FontWeight"" Value=""SemiBold"" />
@@ -1039,8 +984,8 @@ namespace GothicClock
                             <ControlTemplate TargetType=""ComboBox"">
                                 <Grid>
                                     <ToggleButton Name=""ToggleButton""
-                                        Background=""#0B0E17""
-                                        BorderBrush=""#00F0FF""
+                                        Background=""#0B0B10""
+                                        BorderBrush=""#E11D48""
                                         BorderThickness=""1""
                                         Focusable=""False""
                                         IsChecked=""{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}""
@@ -1062,16 +1007,16 @@ namespace GothicClock
                                                             HorizontalAlignment=""Center""
                                                             VerticalAlignment=""Center""
                                                             Data=""M 0 0 L 4 4 L 8 0 Z""
-                                                            Fill=""#00F0FF"" />
+                                                            Fill=""#E11D48"" />
                                                     </Grid>
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property=""IsMouseOver"" Value=""True"">
-                                                        <Setter TargetName=""Border"" Property=""BorderBrush"" Value=""#FFE600"" />
-                                                        <Setter TargetName=""Border"" Property=""Background"" Value=""#121826"" />
+                                                        <Setter TargetName=""Border"" Property=""BorderBrush"" Value=""#FF5500"" />
+                                                        <Setter TargetName=""Border"" Property=""Background"" Value=""#160C12"" />
                                                     </Trigger>
                                                     <Trigger Property=""IsChecked"" Value=""True"">
-                                                        <Setter TargetName=""Border"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                                        <Setter TargetName=""Border"" Property=""BorderBrush"" Value=""#FF1E46"" />
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -1096,13 +1041,13 @@ namespace GothicClock
                                             MinWidth=""{TemplateBinding ActualWidth}""
                                             MaxHeight=""{TemplateBinding MaxDropDownHeight}"">
                                             <Border Name=""DropDownBorder""
-                                                Background=""#080A12""
-                                                BorderBrush=""#00F0FF""
+                                                Background=""#07070B""
+                                                BorderBrush=""#E11D48""
                                                 BorderThickness=""1""
                                                 CornerRadius=""2""
                                                 Margin=""0,2,0,4"">
                                                 <Border.Effect>
-                                                    <DropShadowEffect Color=""#00F0FF"" BlurRadius=""12"" ShadowDepth=""0"" Opacity=""0.5"" />
+                                                    <DropShadowEffect Color=""#E11D48"" BlurRadius=""12"" ShadowDepth=""0"" Opacity=""0.5"" />
                                                 </Border.Effect>
                                                 <ScrollViewer Margin=""2"" SnapsToDevicePixels=""True"">
                                                     <StackPanel IsItemsHost=""True"" KeyboardNavigation.DirectionalNavigation=""Contained"" />
@@ -1117,7 +1062,7 @@ namespace GothicClock
                 </Style>
 
                 <Style TargetType=""CheckBox"">
-                    <Setter Property=""Foreground"" Value=""#C8D4E5"" />
+                    <Setter Property=""Foreground"" Value=""#E2E8F0"" />
                     <Setter Property=""FontFamily"" Value=""Consolas, Segoe UI, sans-serif"" />
                     <Setter Property=""FontSize"" Value=""11"" />
                     <Setter Property=""Cursor"" Value=""Hand"" />
@@ -1134,14 +1079,14 @@ namespace GothicClock
                                         Grid.Column=""0""
                                         Width=""16""
                                         Height=""16""
-                                        Background=""#0A0D16""
-                                        BorderBrush=""#00F0FF""
+                                        Background=""#09090E""
+                                        BorderBrush=""#E11D48""
                                         BorderThickness=""1.2""
                                         CornerRadius=""2""
                                         VerticalAlignment=""Center"">
                                         <Path Name=""CheckMark""
                                             Data=""M 3 7 L 6 10 L 12 3""
-                                            Stroke=""#FFE600""
+                                            Stroke=""#FF1E46""
                                             StrokeThickness=""2""
                                             StrokeStartLineCap=""Round""
                                             StrokeEndLineCap=""Round""
@@ -1157,11 +1102,11 @@ namespace GothicClock
                                 <ControlTemplate.Triggers>
                                     <Trigger Property=""IsChecked"" Value=""True"">
                                         <Setter TargetName=""CheckMark"" Property=""Visibility"" Value=""Visible"" />
-                                        <Setter TargetName=""Box"" Property=""BorderBrush"" Value=""#FFE600"" />
-                                        <Setter TargetName=""Box"" Property=""Background"" Value=""#121824"" />
+                                        <Setter TargetName=""Box"" Property=""BorderBrush"" Value=""#FF1E46"" />
+                                        <Setter TargetName=""Box"" Property=""Background"" Value=""#1C0B12"" />
                                     </Trigger>
                                     <Trigger Property=""IsMouseOver"" Value=""True"">
-                                        <Setter TargetName=""Box"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                        <Setter TargetName=""Box"" Property=""BorderBrush"" Value=""#FF5500"" />
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -1189,14 +1134,14 @@ namespace GothicClock
         private void BuildUI()
         {
             Border windowBorder = new Border();
-            windowBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(8, 9, 14));
-            windowBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            windowBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(8, 8, 12));
+            windowBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             windowBorder.BorderThickness = new Thickness(1.5);
             windowBorder.CornerRadius = new CornerRadius(4);
             windowBorder.ClipToBounds = true;
 
             DropShadowEffect winShadow = new DropShadowEffect();
-            winShadow.Color = System.Windows.Media.Color.FromRgb(0, 240, 255);
+            winShadow.Color = System.Windows.Media.Color.FromRgb(225, 29, 72);
             winShadow.BlurRadius = 24;
             winShadow.ShadowDepth = 0;
             winShadow.Opacity = 0.40;
@@ -1204,15 +1149,15 @@ namespace GothicClock
 
             DockPanel mainDock = new DockPanel();
 
-            // 1. Cyberpunk Title Bar
+            // 1. Soul Society Title Bar
             Grid titleBar = new Grid();
             titleBar.Height = 38;
-            titleBar.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(10, 12, 18));
+            titleBar.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(10, 10, 15));
             DockPanel.SetDock(titleBar, Dock.Top);
 
             Border stripe = new Border();
             stripe.Height = 2;
-            stripe.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+            stripe.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             stripe.VerticalAlignment = VerticalAlignment.Bottom;
             titleBar.Children.Add(stripe);
 
@@ -1244,18 +1189,18 @@ namespace GothicClock
             }
 
             TextBlock tbPrefix = new TextBlock();
-            tbPrefix.Text = "SYS // ";
+            tbPrefix.Text = "BLEACH // ";
             tbPrefix.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
             tbPrefix.FontSize = 11;
             tbPrefix.FontWeight = FontWeights.Bold;
-            tbPrefix.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+            tbPrefix.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
 
             TextBlock tbTitle = new TextBlock();
-            tbTitle.Text = "NIGHT_CITY // GOTHIC_CHRONO_UNIT [V2.5]";
+            tbTitle.Text = "GOTHIC_CHRONO_UNIT [SOUL_SOCIETY]";
             tbTitle.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
             tbTitle.FontSize = 11;
             tbTitle.FontWeight = FontWeights.Bold;
-            tbTitle.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            tbTitle.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
 
             spTitleLeft.Children.Add(tbPrefix);
             spTitleLeft.Children.Add(tbTitle);
@@ -1265,10 +1210,10 @@ namespace GothicClock
             spTitleRight.Orientation = System.Windows.Controls.Orientation.Horizontal;
             spTitleRight.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
 
-            System.Windows.Controls.Button btnMin = CreateTitleButton("—", false);
+            System.Windows.Controls.Button btnMin = CreateTitleButton("min", false);
             btnMin.Click += delegate { this.WindowState = WindowState.Minimized; };
 
-            System.Windows.Controls.Button btnClose = CreateTitleButton("✕", true);
+            System.Windows.Controls.Button btnClose = CreateTitleButton("close", true);
             btnClose.Click += delegate { this.Hide(); };
 
             spTitleRight.Children.Add(btnMin);
@@ -1286,27 +1231,27 @@ namespace GothicClock
             StackPanel content = new StackPanel();
             content.Margin = new Thickness(16, 12, 16, 16);
 
-            // Cyberpunk Header Banner
+            // Bleach Header Banner
             TextBlock txtTitle = new TextBlock();
             txtTitle.Text = "GOTHIC // CHRONO";
             txtTitle.FontFamily = new System.Windows.Media.FontFamily("Old English Text MT, Georgia, serif");
             txtTitle.FontSize = 28;
-            txtTitle.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+            txtTitle.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
             txtTitle.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
 
             DropShadowEffect bannerGlow = new DropShadowEffect();
-            bannerGlow.Color = System.Windows.Media.Color.FromRgb(0, 240, 255);
+            bannerGlow.Color = System.Windows.Media.Color.FromRgb(225, 29, 72);
             bannerGlow.BlurRadius = 14;
             bannerGlow.ShadowDepth = 0;
             bannerGlow.Opacity = 0.85;
             txtTitle.Effect = bannerGlow;
 
             TextBlock txtSub = new TextBlock();
-            txtSub.Text = "// NIGHT_CITY NEURAL_INTERFACE // ARASAKA_PROTOCOL //";
+            txtSub.Text = "// 護廷十三隊 // SUBSTITUTE SHINIGAMI DAISHO //";
             txtSub.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
             txtSub.FontSize = 10;
             txtSub.FontWeight = FontWeights.Bold;
-            txtSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             txtSub.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
             txtSub.Margin = new Thickness(0, 3, 0, 14);
 
@@ -1319,11 +1264,11 @@ namespace GothicClock
             Border cardMaster = CreateCard();
             StackPanel spMaster = new StackPanel();
 
-            TextBlock lblMaster = CreateCardHeader("01. MASTER_CHRONO_CORE");
+            TextBlock lblMaster = CreateCardHeader("01. SPIRITUAL_CHRONO_CORE");
 
-            btnToggleAll = CreateStyledButton("[ STATUS: ONLINE // CHRONO_ACTIVE ]", System.Windows.Media.Color.FromRgb(14, 30, 24));
-            btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 102));
-            btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 102));
+            btnToggleAll = CreateStyledButton("[ STATUS: REIATSU ACTIVE (ON) ]", System.Windows.Media.Color.FromRgb(28, 12, 18));
+            btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
+            btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
             btnToggleAll.Margin = new Thickness(0, 0, 0, 8);
             btnToggleAll.Click += delegate {
                 isMasterActive = !isMasterActive;
@@ -1331,34 +1276,34 @@ namespace GothicClock
                 {
                     widget.Show();
                     widget.AttachToDesktop();
-                    btnToggleAll.Content = "[ STATUS: ONLINE // CHRONO_ACTIVE ]";
-                    btnToggleAll.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(14, 30, 24));
-                    btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 102));
-                    btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 102));
+                    btnToggleAll.Content = "[ STATUS: REIATSU ACTIVE (ON) ]";
+                    btnToggleAll.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 12, 18));
+                    btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
+                    btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
                 }
                 else
                 {
                     widget.Hide();
-                    btnToggleAll.Content = "[ STATUS: OFFLINE // CHRONO_STANDBY ]";
-                    btnToggleAll.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(26, 14, 18));
-                    btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 30, 70));
-                    btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 80, 100));
+                    btnToggleAll.Content = "[ STATUS: REIATSU SEALED (OFF) ]";
+                    btnToggleAll.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(20, 20, 26));
+                    btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 80, 95));
+                    btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 150, 165));
                 }
                 SaveConfig();
             };
 
             // Universal Animation Toggles
             chkEnableAnim = CreateCheckBox("Universal Rolling Animation (All Elements)", true);
-            chkEnableAnim.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            chkEnableAnim.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             chkEnableAnim.FontWeight = FontWeights.Bold;
             chkEnableAnim.Click += delegate {
                 widget.EnableAnimation = chkEnableAnim.IsChecked == true;
                 SaveConfig();
             };
 
-            btnPreviewAnim = CreateStyledButton("[ EXECUTE // TEST_ROLLING_ANIMATION ]", System.Windows.Media.Color.FromRgb(18, 22, 32));
-            btnPreviewAnim.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
-            btnPreviewAnim.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+            btnPreviewAnim = CreateStyledButton("[ TEST // SPIRITUAL ROLLING ANIMATION ]", System.Windows.Media.Color.FromRgb(18, 14, 20));
+            btnPreviewAnim.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
+            btnPreviewAnim.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
             btnPreviewAnim.Margin = new Thickness(0, 4, 0, 10);
             btnPreviewAnim.Click += delegate {
                 widget.ForceRollAll();
@@ -1376,7 +1321,7 @@ namespace GothicClock
             txtAnimSpeedVal.VerticalAlignment = VerticalAlignment.Center;
             txtAnimSpeedVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             txtAnimSpeedVal.FontWeight = FontWeights.Bold;
-            txtAnimSpeedVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtAnimSpeedVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtAnimSpeedVal, Dock.Right);
 
             sliderAnimSpeed = new System.Windows.Controls.Slider();
@@ -1396,7 +1341,7 @@ namespace GothicClock
             dpAnimSpeed.Children.Add(sliderAnimSpeed);
 
             // Master Scale Slider
-            TextBlock lblScale = CreateFieldLabel("Overall Master Scale (HUD Zoom):");
+            TextBlock lblScale = CreateFieldLabel("Overall Master Scale (Widget Zoom):");
             DockPanel dpMasterScale = new DockPanel();
             dpMasterScale.Margin = new Thickness(0, 0, 0, 8);
 
@@ -1407,7 +1352,7 @@ namespace GothicClock
             txtMasterScaleVal.VerticalAlignment = VerticalAlignment.Center;
             txtMasterScaleVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             txtMasterScaleVal.FontWeight = FontWeights.Bold;
-            txtMasterScaleVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+            txtMasterScaleVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtMasterScaleVal, Dock.Right);
 
             sliderMasterScale = new System.Windows.Controls.Slider();
@@ -1439,7 +1384,7 @@ namespace GothicClock
             gridPresets.Children.Add(CreateSmallPresetButton("180%", 1.80));
 
             // Line Spacing Slider
-            TextBlock lblSpacing = CreateFieldLabel("Vertical Telemetry Line Spacing:");
+            TextBlock lblSpacing = CreateFieldLabel("Vertical Element Line Spacing:");
             DockPanel dpSpacing = new DockPanel();
 
             txtSpacingVal = new TextBlock();
@@ -1448,7 +1393,7 @@ namespace GothicClock
             txtSpacingVal.TextAlignment = TextAlignment.Right;
             txtSpacingVal.VerticalAlignment = VerticalAlignment.Center;
             txtSpacingVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            txtSpacingVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtSpacingVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtSpacingVal, Dock.Right);
 
             sliderSpacing = new System.Windows.Controls.Slider();
@@ -1488,26 +1433,28 @@ namespace GothicClock
             Border cardFX = CreateCard();
             StackPanel spFX = new StackPanel();
 
-            TextBlock lblFXTitle = CreateCardHeader("02. CYBER_AURA_OPTICS");
+            TextBlock lblFXTitle = CreateCardHeader("02. REIATSU_SPIRITUAL_AURA");
             spFX.Children.Add(lblFXTitle);
 
-            TextBlock lblPresets = CreateFieldLabel("Cyberpunk & Gothic Color Themes:");
+            TextBlock lblPresets = CreateFieldLabel("Soul Reaper & Spiritual Themes:");
             spFX.Children.Add(lblPresets);
 
             UniformGrid gridGlowThemes = new UniformGrid();
-            gridGlowThemes.Columns = 3;
+            gridGlowThemes.Columns = 4;
             gridGlowThemes.Margin = new Thickness(0, 0, 0, 10);
 
-            gridGlowThemes.Children.Add(CreateThemeButton("Night City", System.Windows.Media.Color.FromRgb(255, 230, 0), "NightCity"));
-            gridGlowThemes.Children.Add(CreateThemeButton("Edgerunners", System.Windows.Media.Color.FromRgb(255, 0, 127), "Edgerunners"));
-            gridGlowThemes.Children.Add(CreateThemeButton("Netrunner Acid", System.Windows.Media.Color.FromRgb(0, 255, 102), "Matrix"));
-            gridGlowThemes.Children.Add(CreateThemeButton("Ice Runner", System.Windows.Media.Color.FromRgb(0, 240, 255), "IceRunner"));
-            gridGlowThemes.Children.Add(CreateThemeButton("Kiroshi Red", System.Windows.Media.Color.FromRgb(255, 30, 70), "Kiroshi"));
-            gridGlowThemes.Children.Add(CreateThemeButton("Chrome Steel", System.Windows.Media.Color.FromRgb(240, 245, 255), "Chrome"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Getsuga", System.Windows.Media.Color.FromRgb(225, 29, 72), "Getsuga"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Bankai", System.Windows.Media.Color.FromRgb(250, 250, 255), "Bankai"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Hollow", System.Windows.Media.Color.FromRgb(153, 27, 27), "Hollow"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Ichigo", System.Windows.Media.Color.FromRgb(234, 88, 12), "Ichigo"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Quincy", System.Windows.Media.Color.FromRgb(2, 132, 199), "Quincy"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Cero", System.Windows.Media.Color.FromRgb(16, 185, 129), "Cero"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Senbon", System.Windows.Media.Color.FromRgb(244, 63, 94), "Senbonzakura"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Moonlight", System.Windows.Media.Color.FromRgb(148, 163, 184), "Moonlight"));
             spFX.Children.Add(gridGlowThemes);
 
             // Glow Radius Slider
-            TextBlock lblGlowRad = CreateFieldLabel("Aura Bloom / Glow Radius:");
+            TextBlock lblGlowRad = CreateFieldLabel("Spiritual Pressure (Reiatsu Bloom):");
             DockPanel dpGlowRad = new DockPanel();
             dpGlowRad.Margin = new Thickness(0, 0, 0, 8);
 
@@ -1517,7 +1464,7 @@ namespace GothicClock
             txtGlowRadiusVal.TextAlignment = TextAlignment.Right;
             txtGlowRadiusVal.VerticalAlignment = VerticalAlignment.Center;
             txtGlowRadiusVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            txtGlowRadiusVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtGlowRadiusVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtGlowRadiusVal, Dock.Right);
 
             sliderGlowRadius = new System.Windows.Controls.Slider();
@@ -1577,18 +1524,6 @@ namespace GothicClock
             spFX.Children.Add(lblColon);
             spFX.Children.Add(cmbColonStyle);
 
-            // Cyber HUD Reticle Checkbox
-            chkCyberHud = CreateCheckBox("Cyberpunk HUD Reticle Brackets ( [ 2077 // ... ] )", true);
-            chkCyberHud.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-            chkCyberHud.FontWeight = FontWeights.Bold;
-            chkCyberHud.Margin = new Thickness(0, 4, 0, 4);
-            chkCyberHud.Click += delegate {
-                widget.ShowCyberHud = chkCyberHud.IsChecked == true;
-                widget.RefreshAppearance();
-                SaveConfig();
-            };
-            spFX.Children.Add(chkCyberHud);
-
             // Gothic Divider Checkbox
             chkShowDivider = CreateCheckBox("Ornate Gothic Diamond Filigree Divider", true);
             chkShowDivider.Margin = new Thickness(0, 4, 0, 4);
@@ -1600,7 +1535,7 @@ namespace GothicClock
             spFX.Children.Add(chkShowDivider);
 
             // Frosted Glass Plate Checkbox
-            chkGlassPlate = CreateCheckBox("Smoked Cyber-Glass Acrylic Plate", false);
+            chkGlassPlate = CreateCheckBox("Smoked Soul Society Acrylic Plate", false);
             chkGlassPlate.Margin = new Thickness(0, 4, 0, 4);
             chkGlassPlate.Click += delegate {
                 widget.SetGlassPlate(chkGlassPlate.IsChecked == true);
@@ -1637,7 +1572,7 @@ namespace GothicClock
             txtTimeSizeVal.VerticalAlignment = VerticalAlignment.Center;
             txtTimeSizeVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             txtTimeSizeVal.FontWeight = FontWeights.Bold;
-            txtTimeSizeVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtTimeSizeVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtTimeSizeVal, Dock.Right);
 
             sliderTimeSize = new System.Windows.Controls.Slider();
@@ -1692,7 +1627,7 @@ namespace GothicClock
             Border cardDay = CreateCard();
             StackPanel spDay = new StackPanel();
 
-            TextBlock lblDayTitle = CreateCardHeader("04. DAY_TELEMETRY");
+            TextBlock lblDayTitle = CreateCardHeader("04. DAY_INSCRIPTION");
 
             chkShowDay = CreateCheckBox("Show Day of Week", true);
             chkShowDay.Click += delegate {
@@ -1712,7 +1647,7 @@ namespace GothicClock
             txtDaySizeVal.VerticalAlignment = VerticalAlignment.Center;
             txtDaySizeVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             txtDaySizeVal.FontWeight = FontWeights.Bold;
-            txtDaySizeVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtDaySizeVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtDaySizeVal, Dock.Right);
 
             sliderDaySize = new System.Windows.Controls.Slider();
@@ -1732,7 +1667,7 @@ namespace GothicClock
             dpDaySize.Children.Add(txtDaySizeVal);
             dpDaySize.Children.Add(sliderDaySize);
 
-            chkTodayPrefix = CreateCheckBox("Include 'Today is' Telemetry Prefix", true);
+            chkTodayPrefix = CreateCheckBox("Include 'Today is' Prefix", true);
             chkTodayPrefix.Click += delegate {
                 widget.ShowTodayPrefix = chkTodayPrefix.IsChecked == true;
                 widget.RefreshAppearance();
@@ -1753,7 +1688,7 @@ namespace GothicClock
             Border cardDate = CreateCard();
             StackPanel spDate = new StackPanel();
 
-            TextBlock lblDateTitle = CreateCardHeader("05. DATE_CHRONOMETER");
+            TextBlock lblDateTitle = CreateCardHeader("05. DATE_INSCRIPTION");
 
             chkShowDate = CreateCheckBox("Show Date Element", true);
             chkShowDate.Click += delegate {
@@ -1773,7 +1708,7 @@ namespace GothicClock
             txtDateSizeVal.VerticalAlignment = VerticalAlignment.Center;
             txtDateSizeVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             txtDateSizeVal.FontWeight = FontWeights.Bold;
-            txtDateSizeVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            txtDateSizeVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             DockPanel.SetDock(txtDateSizeVal, Dock.Right);
 
             sliderDateSize = new System.Windows.Controls.Slider();
@@ -1825,7 +1760,7 @@ namespace GothicClock
             Border cardPos = CreateCard();
             StackPanel spPos = new StackPanel();
 
-            TextBlock lblPos = CreateCardHeader("06. HUD_COORDINATES & MOVEMENT");
+            TextBlock lblPos = CreateCardHeader("06. SPIRIT_COORDINATES & MOVEMENT");
 
             UniformGrid gridPos = new UniformGrid();
             gridPos.Columns = 3;
@@ -1856,7 +1791,7 @@ namespace GothicClock
             gridPos.Children.Add(btnBL);
             gridPos.Children.Add(btnReset);
 
-            btnMoveMode = CreateStyledButton("[ ENTER MOVE MODE // DRAG ON SCREEN ]", System.Windows.Media.Color.FromRgb(14, 20, 32));
+            btnMoveMode = CreateStyledButton("[ ENTER MOVE MODE // DRAG ON SCREEN ]", System.Windows.Media.Color.FromRgb(16, 11, 18));
             btnMoveMode.Margin = new Thickness(0, 6, 0, 0);
             btnMoveMode.Click += delegate {
                 bool newMode = !widget.IsMoveMode;
@@ -1864,16 +1799,16 @@ namespace GothicClock
                 if (newMode)
                 {
                     btnMoveMode.Content = "[ LOCK COORDINATES // DONE DRAGGING ]";
-                    btnMoveMode.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(36, 28, 12));
-                    btnMoveMode.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
-                    btnMoveMode.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+                    btnMoveMode.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(38, 16, 12));
+                    btnMoveMode.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 85, 0));
+                    btnMoveMode.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 85, 0));
                 }
                 else
                 {
                     btnMoveMode.Content = "[ ENTER MOVE MODE // DRAG ON SCREEN ]";
-                    btnMoveMode.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(14, 20, 32));
-                    btnMoveMode.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-                    btnMoveMode.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+                    btnMoveMode.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(16, 11, 18));
+                    btnMoveMode.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
+                    btnMoveMode.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
                     SaveConfig();
                 }
             };
@@ -1890,7 +1825,7 @@ namespace GothicClock
             Border cardSys = CreateCard();
             StackPanel spSys = new StackPanel();
 
-            TextBlock lblSys = CreateCardHeader("07. SYSTEM_DAEMON & INTEGRATION");
+            TextBlock lblSys = CreateCardHeader("07. SOUL_REAPER_DAEMON & INTEGRATION");
 
             chkAutoStart = CreateCheckBox("Start Daemon Silently on Windows Boot", IsStartupEnabled());
             chkAutoStart.Click += delegate {
@@ -1947,30 +1882,46 @@ namespace GothicClock
             return btn;
         }
 
-        private System.Windows.Controls.Button CreateTitleButton(string text, bool isClose)
+        private System.Windows.Controls.Button CreateTitleButton(string type, bool isClose)
         {
             System.Windows.Controls.Button btn = new System.Windows.Controls.Button();
-            btn.Content = text;
             btn.Width = 44;
             btn.Height = 36;
-            btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 185, 195));
             btn.Background = System.Windows.Media.Brushes.Transparent;
             btn.BorderThickness = new Thickness(0);
-            btn.FontSize = 13;
             btn.Cursor = System.Windows.Input.Cursors.Hand;
 
+            System.Windows.Shapes.Path iconPath = new System.Windows.Shapes.Path();
+            iconPath.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+            iconPath.StrokeThickness = 1.8;
+            iconPath.StrokeStartLineCap = PenLineCap.Round;
+            iconPath.StrokeEndLineCap = PenLineCap.Round;
+            iconPath.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            iconPath.VerticalAlignment = VerticalAlignment.Center;
+
+            if (type == "min")
+            {
+                iconPath.Data = Geometry.Parse("M 0 0 L 12 0");
+            }
+            else
+            {
+                iconPath.Data = Geometry.Parse("M 0 0 L 10 10 M 10 0 L 0 10");
+            }
+
+            btn.Content = iconPath;
+
             SolidColorBrush defaultBg = System.Windows.Media.Brushes.Transparent;
-            SolidColorBrush hoverBg = isClose ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)) : new SolidColorBrush(System.Windows.Media.Color.FromRgb(40, 43, 52));
-            SolidColorBrush hoverFg = System.Windows.Media.Brushes.White;
-            SolidColorBrush defaultFg = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 185, 195));
+            SolidColorBrush hoverBg = isClose ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 38, 38)) : new SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 32, 42));
+            SolidColorBrush defaultStroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+            SolidColorBrush hoverStroke = System.Windows.Media.Brushes.White;
 
             btn.MouseEnter += delegate {
                 btn.Background = hoverBg;
-                btn.Foreground = hoverFg;
+                iconPath.Stroke = hoverStroke;
             };
             btn.MouseLeave += delegate {
                 btn.Background = defaultBg;
-                btn.Foreground = defaultFg;
+                iconPath.Stroke = defaultStroke;
             };
 
             return btn;
@@ -1987,12 +1938,12 @@ namespace GothicClock
         private Border CreateCard()
         {
             Border b = new Border();
-            b.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(11, 13, 19));
+            b.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 13, 18));
             b.CornerRadius = new CornerRadius(3);
             b.Padding = new Thickness(14, 12, 14, 12);
             b.Margin = new Thickness(0, 0, 0, 10);
             b.BorderThickness = new Thickness(2, 1, 1, 1);
-            b.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            b.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             return b;
         }
 
@@ -2003,7 +1954,7 @@ namespace GothicClock
             tb.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
             tb.FontWeight = FontWeights.Bold;
             tb.FontSize = 11.5;
-            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 230, 0));
+            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             tb.Margin = new Thickness(0, 0, 0, 8);
             return tb;
         }
@@ -2014,7 +1965,7 @@ namespace GothicClock
             tb.Text = "> " + text;
             tb.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             tb.FontSize = 10.5;
-            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(130, 150, 175));
+            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
             tb.Margin = new Thickness(0, 4, 0, 3);
             return tb;
         }
@@ -2025,7 +1976,7 @@ namespace GothicClock
             cb.Content = text;
             cb.FontFamily = new System.Windows.Media.FontFamily("Consolas, Segoe UI, sans-serif");
             cb.FontSize = 11;
-            cb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(210, 220, 235));
+            cb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
             cb.IsChecked = isChecked;
             cb.Margin = new Thickness(0, 3, 0, 5);
             return cb;
@@ -2036,9 +1987,9 @@ namespace GothicClock
             System.Windows.Controls.Button btn = new System.Windows.Controls.Button();
             btn.Content = text;
             btn.Height = 36;
-            btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
             btn.Background = new SolidColorBrush(bg);
-            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 29, 72));
             btn.BorderThickness = new Thickness(1);
             btn.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
             btn.FontWeight = FontWeights.Bold;
@@ -2053,9 +2004,9 @@ namespace GothicClock
             btn.Content = text;
             btn.Height = 28;
             btn.Margin = new Thickness(2);
-            btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 220, 240));
-            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(16, 20, 30));
-            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(32, 44, 66));
+            btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
+            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(18, 18, 26));
+            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(45, 45, 60));
             btn.BorderThickness = new Thickness(1);
             btn.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             btn.FontSize = 10;
@@ -2070,8 +2021,8 @@ namespace GothicClock
             btn.Height = 32;
             btn.Margin = new Thickness(2, 3, 2, 3);
             btn.Cursor = System.Windows.Input.Cursors.Hand;
-            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 16, 24));
-            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(160, accentColor.R, accentColor.G, accentColor.B));
+            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(14, 14, 20));
+            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(180, accentColor.R, accentColor.G, accentColor.B));
             btn.BorderThickness = new Thickness(1);
 
             StackPanel sp = new StackPanel();
@@ -2081,7 +2032,7 @@ namespace GothicClock
             Border dot = new Border();
             dot.Width = 8;
             dot.Height = 8;
-            dot.CornerRadius = new CornerRadius(1);
+            dot.CornerRadius = new CornerRadius(4);
             dot.Background = new SolidColorBrush(accentColor);
             dot.Margin = new Thickness(0, 0, 6, 0);
 
@@ -2090,7 +2041,7 @@ namespace GothicClock
             tb.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
             tb.FontSize = 10;
             tb.FontWeight = FontWeights.Bold;
-            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 230, 245));
+            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 248));
 
             sp.Children.Add(dot);
             sp.Children.Add(tb);
@@ -2098,14 +2049,6 @@ namespace GothicClock
 
             btn.Click += delegate {
                 widget.SetGlowTheme(themeKey);
-                if (themeKey == "Stealth")
-                {
-                    sliderGlowRadius.Value = 3;
-                }
-                else if (sliderGlowRadius.Value < 8)
-                {
-                    sliderGlowRadius.Value = 18;
-                }
                 SaveConfig();
             };
 
@@ -2228,7 +2171,6 @@ namespace GothicClock
                             else if (k == "ColonStyle") widget.ColonStyle = v;
                             else if (k == "ShowDivider") widget.ShowDivider = bool.Parse(v);
                             else if (k == "ShowGlass") widget.ShowGlassBackplate = bool.Parse(v);
-                            else if (k == "ShowCyberHud") widget.ShowCyberHud = bool.Parse(v);
                         }
                     }
                 }
@@ -2277,7 +2219,6 @@ namespace GothicClock
             else if (widget.ColonStyle == "Blink") cmbColonStyle.SelectedIndex = 1;
             else if (widget.ColonStyle == "Solid") cmbColonStyle.SelectedIndex = 2;
 
-            chkCyberHud.IsChecked = widget.ShowCyberHud;
             chkShowDivider.IsChecked = widget.ShowDivider;
             chkGlassPlate.IsChecked = widget.ShowGlassBackplate;
 
@@ -2289,8 +2230,10 @@ namespace GothicClock
             if (!isMasterActive)
             {
                 widget.Hide();
-                btnToggleAll.Content = "All Elements: STOPPED (OFF)";
-                btnToggleAll.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(70, 75, 85));
+                btnToggleAll.Content = "[ STATUS: REIATSU SEALED (OFF) ]";
+                btnToggleAll.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(20, 20, 26));
+                btnToggleAll.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 80, 95));
+                btnToggleAll.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 150, 165));
             }
             else
             {
@@ -2329,7 +2272,6 @@ namespace GothicClock
                     sw.WriteLine("ColonStyle=" + widget.ColonStyle);
                     sw.WriteLine("ShowDivider=" + widget.ShowDivider);
                     sw.WriteLine("ShowGlass=" + widget.ShowGlassBackplate);
-                    sw.WriteLine("ShowCyberHud=" + widget.ShowCyberHud);
                 }
             }
             catch { }
