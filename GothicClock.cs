@@ -20,7 +20,139 @@ using Microsoft.Win32;
 namespace GothicClock
 {
     // =========================================================================
-    // 1. DESKTOP CLOCK WIDGET WINDOW (ROLLING TICKER ANIMATION + WIN+D IMMUNITY)
+    // 0. REUSABLE ROLLING TICKER BOX (SLIDE DOWN AND ENTER FROM TOP)
+    // =========================================================================
+    public class RollingBox
+    {
+        public Grid Container;
+        public TextBlock TxtCurrent;
+        public TextBlock TxtIncoming;
+        public TranslateTransform TransCurrent;
+        public TranslateTransform TransIncoming;
+        private string lastText = "";
+
+        public RollingBox(System.Windows.Media.FontFamily font, double fontSize, SolidColorBrush brush, DropShadowEffect effect)
+        {
+            Container = new Grid();
+            Container.ClipToBounds = true;
+            Container.VerticalAlignment = VerticalAlignment.Center;
+            Container.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            Container.Height = fontSize * 1.35;
+
+            TransCurrent = new TranslateTransform();
+            TxtCurrent = new TextBlock();
+            TxtCurrent.FontFamily = font;
+            TxtCurrent.FontSize = fontSize;
+            TxtCurrent.Foreground = brush;
+            TxtCurrent.TextAlignment = TextAlignment.Center;
+            TxtCurrent.VerticalAlignment = VerticalAlignment.Center;
+            TxtCurrent.RenderTransform = TransCurrent;
+            TxtCurrent.Effect = effect;
+
+            TransIncoming = new TranslateTransform();
+            TxtIncoming = new TextBlock();
+            TxtIncoming.FontFamily = font;
+            TxtIncoming.FontSize = fontSize;
+            TxtIncoming.Foreground = brush;
+            TxtIncoming.TextAlignment = TextAlignment.Center;
+            TxtIncoming.VerticalAlignment = VerticalAlignment.Center;
+            TxtIncoming.RenderTransform = TransIncoming;
+            TxtIncoming.Opacity = 0;
+            TxtIncoming.Effect = effect;
+
+            Container.Children.Add(TxtCurrent);
+            Container.Children.Add(TxtIncoming);
+        }
+
+        public void SetFontSize(double size)
+        {
+            TxtCurrent.FontSize = size;
+            TxtIncoming.FontSize = size;
+            Container.Height = size * 1.35;
+        }
+
+        public void Update(string newText, bool animate, int durationMs)
+        {
+            if (newText == lastText) return;
+
+            if (string.IsNullOrEmpty(lastText) || !animate)
+            {
+                TxtCurrent.Text = newText;
+                TransCurrent.Y = 0;
+                TxtCurrent.Opacity = 1;
+                TxtIncoming.Opacity = 0;
+                lastText = newText;
+                return;
+            }
+
+            Animate(lastText, newText, durationMs);
+            lastText = newText;
+        }
+
+        public void ForceRoll(int durationMs)
+        {
+            if (!string.IsNullOrEmpty(lastText))
+            {
+                Animate(lastText, lastText, durationMs);
+            }
+        }
+
+        private void Animate(string oldVal, string newVal, int durationMs)
+        {
+            // Clear any active animations to avoid conflict
+            TransCurrent.BeginAnimation(TranslateTransform.YProperty, null);
+            TxtCurrent.BeginAnimation(UIElement.OpacityProperty, null);
+            TransIncoming.BeginAnimation(TranslateTransform.YProperty, null);
+            TxtIncoming.BeginAnimation(UIElement.OpacityProperty, null);
+
+            TxtCurrent.Text = oldVal;
+            TxtIncoming.Text = newVal;
+
+            double travelDistance = TxtCurrent.FontSize * 0.95;
+
+            TransCurrent.Y = 0;
+            TransIncoming.Y = -travelDistance;
+
+            TxtCurrent.Opacity = 1.0;
+            TxtIncoming.Opacity = 0.0;
+
+            Duration dur = new Duration(TimeSpan.FromMilliseconds(durationMs));
+            CubicEase ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            DoubleAnimation animOutY = new DoubleAnimation(0, travelDistance, dur) { EasingFunction = ease };
+            DoubleAnimation animOutOp = new DoubleAnimation(1.0, 0.0, dur) { EasingFunction = ease };
+
+            DoubleAnimation animInY = new DoubleAnimation(-travelDistance, 0, dur) { EasingFunction = ease };
+            DoubleAnimation animInOp = new DoubleAnimation(0.0, 1.0, dur) { EasingFunction = ease };
+
+            animInY.Completed += delegate {
+                try
+                {
+                    TransCurrent.BeginAnimation(TranslateTransform.YProperty, null);
+                    TxtCurrent.BeginAnimation(UIElement.OpacityProperty, null);
+                    TransIncoming.BeginAnimation(TranslateTransform.YProperty, null);
+                    TxtIncoming.BeginAnimation(UIElement.OpacityProperty, null);
+
+                    TransCurrent.Y = 0;
+                    TxtCurrent.Opacity = 1.0;
+                    TxtCurrent.Text = newVal;
+
+                    TransIncoming.Y = -travelDistance;
+                    TxtIncoming.Opacity = 0.0;
+                }
+                catch { }
+            };
+
+            TransCurrent.BeginAnimation(TranslateTransform.YProperty, animOutY);
+            TxtCurrent.BeginAnimation(UIElement.OpacityProperty, animOutOp);
+
+            TransIncoming.BeginAnimation(TranslateTransform.YProperty, animInY);
+            TxtIncoming.BeginAnimation(UIElement.OpacityProperty, animInOp);
+        }
+    }
+
+    // =========================================================================
+    // 1. DESKTOP CLOCK WIDGET WINDOW (FULL ROLLING TICKER ON ALL ELEMENTS)
     // =========================================================================
     public class WidgetWindow : Window
     {
@@ -71,24 +203,23 @@ namespace GothicClock
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
-        // UI Elements
+        // Rolling elements for Time line
         private StackPanel timePanel;
-        private TextBlock txtHourMin;
-        private Grid secBox;
-        private TextBlock txtSecCurrent;
-        private TextBlock txtSecIncoming;
-        private TranslateTransform transSecCurrent;
-        private TranslateTransform transSecIncoming;
-        private TextBlock txtAmPm;
+        public RollingBox BoxHour;
+        private TextBlock txtColon1;
+        public RollingBox BoxMin;
+        private TextBlock txtColon2;
+        public RollingBox BoxSec;
+        public RollingBox BoxAmPm;
 
-        private TextBlock txtDay;
-        private TextBlock txtDate;
+        // Rolling elements for Day and Date
+        public RollingBox BoxDay;
+        public RollingBox BoxDate;
+
         private StackPanel stack;
         private Border mainBorder;
         private ScaleTransform scaleTransform;
         private DispatcherTimer timer;
-
-        private string lastSecondStr = "";
 
         // Settings
         public bool ShowTime = true;
@@ -105,7 +236,7 @@ namespace GothicClock
         public bool ShowTodayPrefix = true;
         public string DateFormat = "MM/dd/yyyy";
 
-        public bool EnableTimeAnimation = true;
+        public bool EnableAnimation = true;
         public int AnimationDurationMs = 320;
 
         public double MasterScale = 0.85;
@@ -155,84 +286,54 @@ namespace GothicClock
             stack.Margin = new Thickness(4);
 
             // =================================================================
-            // TIME PANEL WITH SLIDE-DOWN TICKER ANIMATION
+            // TIME LINE WITH INDEPENDENT ROLLING BOXES (Hour : Min : Sec AM/PM)
             // =================================================================
             timePanel = new StackPanel();
             timePanel.Orientation = System.Windows.Controls.Orientation.Horizontal;
             timePanel.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
 
-            // Hours & Minutes (e.g., "01:34:")
-            txtHourMin = new TextBlock();
-            txtHourMin.FontFamily = gothicFont;
-            txtHourMin.FontSize = TimeFontSize;
-            txtHourMin.Foreground = textBrush;
-            txtHourMin.VerticalAlignment = VerticalAlignment.Center;
-            txtHourMin.Effect = shadow;
+            BoxHour = new RollingBox(gothicFont, TimeFontSize, textBrush, shadow);
 
-            // Seconds Container (Clipped for smooth slide-down roll)
-            secBox = new Grid();
-            secBox.ClipToBounds = true;
-            secBox.VerticalAlignment = VerticalAlignment.Center;
-            secBox.Height = TimeFontSize * 1.35;
+            txtColon1 = new TextBlock();
+            txtColon1.FontFamily = gothicFont;
+            txtColon1.FontSize = TimeFontSize;
+            txtColon1.Foreground = textBrush;
+            txtColon1.Text = ":";
+            txtColon1.VerticalAlignment = VerticalAlignment.Center;
+            txtColon1.Effect = shadow;
 
-            transSecCurrent = new TranslateTransform();
-            txtSecCurrent = new TextBlock();
-            txtSecCurrent.FontFamily = gothicFont;
-            txtSecCurrent.FontSize = TimeFontSize;
-            txtSecCurrent.Foreground = textBrush;
-            txtSecCurrent.TextAlignment = TextAlignment.Center;
-            txtSecCurrent.VerticalAlignment = VerticalAlignment.Center;
-            txtSecCurrent.RenderTransform = transSecCurrent;
-            txtSecCurrent.Effect = shadow;
+            BoxMin = new RollingBox(gothicFont, TimeFontSize, textBrush, shadow);
 
-            transSecIncoming = new TranslateTransform();
-            txtSecIncoming = new TextBlock();
-            txtSecIncoming.FontFamily = gothicFont;
-            txtSecIncoming.FontSize = TimeFontSize;
-            txtSecIncoming.Foreground = textBrush;
-            txtSecIncoming.TextAlignment = TextAlignment.Center;
-            txtSecIncoming.VerticalAlignment = VerticalAlignment.Center;
-            txtSecIncoming.RenderTransform = transSecIncoming;
-            txtSecIncoming.Opacity = 0;
-            txtSecIncoming.Effect = shadow;
+            txtColon2 = new TextBlock();
+            txtColon2.FontFamily = gothicFont;
+            txtColon2.FontSize = TimeFontSize;
+            txtColon2.Foreground = textBrush;
+            txtColon2.Text = ":";
+            txtColon2.VerticalAlignment = VerticalAlignment.Center;
+            txtColon2.Effect = shadow;
 
-            secBox.Children.Add(txtSecCurrent);
-            secBox.Children.Add(txtSecIncoming);
+            BoxSec = new RollingBox(gothicFont, TimeFontSize, textBrush, shadow);
+            BoxAmPm = new RollingBox(gothicFont, TimeFontSize, textBrush, shadow);
+            BoxAmPm.Container.Margin = new Thickness(6, 0, 0, 0);
 
-            // AM / PM (e.g., " AM")
-            txtAmPm = new TextBlock();
-            txtAmPm.FontFamily = gothicFont;
-            txtAmPm.FontSize = TimeFontSize;
-            txtAmPm.Foreground = textBrush;
-            txtAmPm.VerticalAlignment = VerticalAlignment.Center;
-            txtAmPm.Effect = shadow;
+            timePanel.Children.Add(BoxHour.Container);
+            timePanel.Children.Add(txtColon1);
+            timePanel.Children.Add(BoxMin.Container);
+            timePanel.Children.Add(txtColon2);
+            timePanel.Children.Add(BoxSec.Container);
+            timePanel.Children.Add(BoxAmPm.Container);
 
-            timePanel.Children.Add(txtHourMin);
-            timePanel.Children.Add(secBox);
-            timePanel.Children.Add(txtAmPm);
+            // =================================================================
+            // DAY & DATE WITH ROLLING TICKER SUPPORT
+            // =================================================================
+            BoxDay = new RollingBox(gothicFont, DayFontSize, textBrush, shadow);
+            BoxDay.Container.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
 
-            // Element 2: Day
-            txtDay = new TextBlock();
-            txtDay.FontFamily = gothicFont;
-            txtDay.FontSize = DayFontSize;
-            txtDay.Foreground = textBrush;
-            txtDay.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-            txtDay.TextAlignment = TextAlignment.Center;
-            txtDay.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
-            txtDay.Effect = shadow;
-
-            // Element 3: Date
-            txtDate = new TextBlock();
-            txtDate.FontFamily = gothicFont;
-            txtDate.FontSize = DateFontSize;
-            txtDate.Foreground = textBrush;
-            txtDate.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
-            txtDate.TextAlignment = TextAlignment.Center;
-            txtDate.Effect = shadow;
+            BoxDate = new RollingBox(gothicFont, DateFontSize, textBrush, shadow);
 
             stack.Children.Add(timePanel);
-            stack.Children.Add(txtDay);
-            stack.Children.Add(txtDate);
+            stack.Children.Add(BoxDay.Container);
+            stack.Children.Add(BoxDate.Container);
 
             mainBorder = new Border();
             mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
@@ -258,26 +359,39 @@ namespace GothicClock
         public void RefreshAppearance()
         {
             timePanel.Visibility = ShowTime ? Visibility.Visible : Visibility.Collapsed;
-            txtDay.Visibility = ShowDay ? Visibility.Visible : Visibility.Collapsed;
-            txtDate.Visibility = ShowDate ? Visibility.Visible : Visibility.Collapsed;
+            BoxDay.Container.Visibility = ShowDay ? Visibility.Visible : Visibility.Collapsed;
+            BoxDate.Container.Visibility = ShowDate ? Visibility.Visible : Visibility.Collapsed;
 
-            txtHourMin.FontSize = TimeFontSize;
-            txtSecCurrent.FontSize = TimeFontSize;
-            txtSecIncoming.FontSize = TimeFontSize;
-            secBox.Height = TimeFontSize * 1.35;
-            txtAmPm.FontSize = TimeFontSize;
+            BoxHour.SetFontSize(TimeFontSize);
+            txtColon1.FontSize = TimeFontSize;
+            BoxMin.SetFontSize(TimeFontSize);
+            txtColon2.FontSize = TimeFontSize;
+            BoxSec.SetFontSize(TimeFontSize);
+            BoxAmPm.SetFontSize(TimeFontSize);
 
-            txtDay.FontSize = DayFontSize;
-            txtDate.FontSize = DateFontSize;
+            txtColon2.Visibility = ShowSeconds ? Visibility.Visible : Visibility.Collapsed;
+            BoxSec.Container.Visibility = ShowSeconds ? Visibility.Visible : Visibility.Collapsed;
+            BoxAmPm.Container.Visibility = Is12Hour ? Visibility.Visible : Visibility.Collapsed;
 
-            txtDay.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
+            BoxDay.SetFontSize(DayFontSize);
+            BoxDate.SetFontSize(DateFontSize);
+
+            BoxDay.Container.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
 
             scaleTransform.ScaleX = MasterScale;
             scaleTransform.ScaleY = MasterScale;
 
-            secBox.Visibility = ShowSeconds ? Visibility.Visible : Visibility.Collapsed;
-
             UpdateClock();
+        }
+
+        public void ForceRollAll()
+        {
+            BoxHour.ForceRoll(AnimationDurationMs);
+            BoxMin.ForceRoll(AnimationDurationMs);
+            BoxSec.ForceRoll(AnimationDurationMs);
+            BoxAmPm.ForceRoll(AnimationDurationMs);
+            BoxDay.ForceRoll(AnimationDurationMs);
+            BoxDate.ForceRoll(AnimationDurationMs);
         }
 
         public void SetMoveMode(bool enable)
@@ -324,36 +438,22 @@ namespace GothicClock
             // 1. Time Update
             if (ShowTime)
             {
-                string hourFormat = Is12Hour ? "hh:mm" : "HH:mm";
-                string hourMin = now.ToString(hourFormat);
-                string newSec = now.ToString("ss");
-                string amPm = Is12Hour ? (" " + now.ToString("tt")) : "";
+                string hourStr = Is12Hour ? now.ToString("hh") : now.ToString("HH");
+                string minStr = now.ToString("mm");
+                string secStr = now.ToString("ss");
+                string amPmStr = Is12Hour ? now.ToString("tt") : "";
+
+                BoxHour.Update(hourStr, EnableAnimation, AnimationDurationMs);
+                BoxMin.Update(minStr, EnableAnimation, AnimationDurationMs);
 
                 if (ShowSeconds)
                 {
-                    txtHourMin.Text = hourMin + ":";
-                    txtAmPm.Text = amPm;
-
-                    if (newSec != lastSecondStr)
-                    {
-                        if (!string.IsNullOrEmpty(lastSecondStr) && EnableTimeAnimation)
-                        {
-                            AnimateSeconds(lastSecondStr, newSec);
-                        }
-                        else
-                        {
-                            txtSecCurrent.Text = newSec;
-                            transSecCurrent.Y = 0;
-                            txtSecCurrent.Opacity = 1;
-                            txtSecIncoming.Opacity = 0;
-                        }
-                        lastSecondStr = newSec;
-                    }
+                    BoxSec.Update(secStr, EnableAnimation, AnimationDurationMs);
                 }
-                else
+
+                if (Is12Hour)
                 {
-                    txtHourMin.Text = hourMin;
-                    txtAmPm.Text = amPm;
+                    BoxAmPm.Update(amPmStr, EnableAnimation, AnimationDurationMs);
                 }
             }
 
@@ -361,49 +461,16 @@ namespace GothicClock
             if (ShowDay)
             {
                 string dayName = now.ToString("dddd");
-                txtDay.Text = ShowTodayPrefix ? ("Today is " + dayName) : dayName;
+                string dayText = ShowTodayPrefix ? ("Today is " + dayName) : dayName;
+                BoxDay.Update(dayText, EnableAnimation, AnimationDurationMs);
             }
 
             // 3. Date Update
             if (ShowDate)
             {
-                txtDate.Text = now.ToString(DateFormat);
+                string dateText = now.ToString(DateFormat);
+                BoxDate.Update(dateText, EnableAnimation, AnimationDurationMs);
             }
-        }
-
-        // =====================================================================
-        // SLIDE-DOWN TICKER ANIMATION (Current goes down, Incoming drops from top)
-        // =====================================================================
-        private void AnimateSeconds(string oldSec, string newSec)
-        {
-            txtSecCurrent.Text = oldSec;
-            txtSecIncoming.Text = newSec;
-
-            double travelDistance = TimeFontSize * 0.95;
-
-            // Reset start positions
-            transSecCurrent.Y = 0;
-            transSecIncoming.Y = -travelDistance;
-
-            txtSecCurrent.Opacity = 1.0;
-            txtSecIncoming.Opacity = 0.0;
-
-            Duration dur = new Duration(TimeSpan.FromMilliseconds(AnimationDurationMs));
-            CubicEase ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-
-            // 1. Old second slides down and fades out
-            DoubleAnimation animOutY = new DoubleAnimation(0, travelDistance, dur) { EasingFunction = ease };
-            DoubleAnimation animOutOp = new DoubleAnimation(1.0, 0.0, dur) { EasingFunction = ease };
-
-            // 2. New second slides down from top into place and fades in
-            DoubleAnimation animInY = new DoubleAnimation(-travelDistance, 0, dur) { EasingFunction = ease };
-            DoubleAnimation animInOp = new DoubleAnimation(0.0, 1.0, dur) { EasingFunction = ease };
-
-            transSecCurrent.BeginAnimation(TranslateTransform.YProperty, animOutY);
-            txtSecCurrent.BeginAnimation(UIElement.OpacityProperty, animOutOp);
-
-            transSecIncoming.BeginAnimation(TranslateTransform.YProperty, animInY);
-            txtSecIncoming.BeginAnimation(UIElement.OpacityProperty, animInOp);
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -431,7 +498,6 @@ namespace GothicClock
                 return new IntPtr(MA_NOACTIVATE);
             }
 
-            // Block Win+D ShowDesktop hide command
             if (msg == WM_SHOWWINDOW && (int)wParam == 0 && StayOnDesktop)
             {
                 handled = true;
@@ -473,7 +539,7 @@ namespace GothicClock
     }
 
     // =========================================================================
-    // 2. MODERN CONTROL PANEL WITH ANIMATION SETTINGS
+    // 2. MODERN CONTROL PANEL WITH FULL ROLLING ANIMATION CONTROLS
     // =========================================================================
     public class ControlPanelWindow : Window
     {
@@ -483,6 +549,7 @@ namespace GothicClock
 
         private System.Windows.Controls.Button btnToggleAll;
         private System.Windows.Controls.Button btnMoveMode;
+        private System.Windows.Controls.Button btnPreviewAnim;
 
         // Master scale & spacing
         private System.Windows.Controls.Slider sliderMasterScale;
@@ -490,15 +557,17 @@ namespace GothicClock
         private System.Windows.Controls.Slider sliderSpacing;
         private TextBlock txtSpacingVal;
 
-        // Element 1: Time & Animation
+        // Master Animation Settings
+        private System.Windows.Controls.CheckBox chkEnableAnim;
+        private System.Windows.Controls.Slider sliderAnimSpeed;
+        private TextBlock txtAnimSpeedVal;
+
+        // Element 1: Time
         private System.Windows.Controls.CheckBox chkShowTime;
         private System.Windows.Controls.Slider sliderTimeSize;
         private TextBlock txtTimeSizeVal;
         private System.Windows.Controls.CheckBox chk12Hour;
         private System.Windows.Controls.CheckBox chkShowSeconds;
-        private System.Windows.Controls.CheckBox chkEnableAnim;
-        private System.Windows.Controls.Slider sliderAnimSpeed;
-        private TextBlock txtAnimSpeedVal;
 
         // Element 2: Day
         private System.Windows.Controls.CheckBox chkShowDay;
@@ -550,7 +619,6 @@ namespace GothicClock
             string xaml = @"<ResourceDictionary xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""
                 xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"">
 
-                <!-- Dark Sleek Transparent ScrollBar -->
                 <Style TargetType=""ScrollBar"">
                     <Setter Property=""Background"" Value=""Transparent"" />
                     <Setter Property=""Width"" Value=""6"" />
@@ -575,7 +643,6 @@ namespace GothicClock
                     </Setter>
                 </Style>
 
-                <!-- Modern Cyan/Blue Dark Slider -->
                 <Style TargetType=""Slider"">
                     <Setter Property=""Height"" Value=""24"" />
                     <Setter Property=""Template"">
@@ -692,7 +759,7 @@ namespace GothicClock
             txtTitle.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
 
             TextBlock txtSub = new TextBlock();
-            txtSub.Text = "Rolling Ticker Animation & Control Center";
+            txtSub.Text = "Universal Rolling Animation (All Elements) & Control Center";
             txtSub.FontSize = 11;
             txtSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(130, 140, 155));
             txtSub.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
@@ -702,15 +769,15 @@ namespace GothicClock
             content.Children.Add(txtSub);
 
             // =================================================================
-            // CARD 1: MASTER CONTROLS & GLOBAL SIZING
+            // CARD 1: MASTER CONTROLS & UNIVERSAL ROLLING ANIMATION
             // =================================================================
             Border cardMaster = CreateCard();
             StackPanel spMaster = new StackPanel();
 
-            TextBlock lblMaster = CreateCardHeader("Master Controls (All Three Elements)");
+            TextBlock lblMaster = CreateCardHeader("Master Controls & Universal Animation");
 
             btnToggleAll = CreateStyledButton("All Elements: ACTIVE (ON)", System.Windows.Media.Color.FromRgb(30, 120, 60));
-            btnToggleAll.Margin = new Thickness(0, 0, 0, 10);
+            btnToggleAll.Margin = new Thickness(0, 0, 0, 8);
             btnToggleAll.Click += delegate {
                 isMasterActive = !isMasterActive;
                 if (isMasterActive)
@@ -729,6 +796,51 @@ namespace GothicClock
                 SaveConfig();
             };
 
+            // Universal Animation Toggles
+            chkEnableAnim = CreateCheckBox("Slide-Down Animation on ALL Elements (Time, Day & Date)", true);
+            chkEnableAnim.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246));
+            chkEnableAnim.FontWeight = FontWeights.SemiBold;
+            chkEnableAnim.Click += delegate {
+                widget.EnableAnimation = chkEnableAnim.IsChecked == true;
+                SaveConfig();
+            };
+
+            btnPreviewAnim = CreateStyledButton("Test / Trigger Rolling Animation on All Elements", System.Windows.Media.Color.FromRgb(35, 75, 135));
+            btnPreviewAnim.Margin = new Thickness(0, 4, 0, 10);
+            btnPreviewAnim.Click += delegate {
+                widget.ForceRollAll();
+            };
+
+            // Animation Speed
+            TextBlock lblAnimSpeed = CreateFieldLabel("Animation Roll Speed (ms):");
+            DockPanel dpAnimSpeed = new DockPanel();
+            dpAnimSpeed.Margin = new Thickness(0, 0, 0, 8);
+
+            txtAnimSpeedVal = new TextBlock();
+            txtAnimSpeedVal.Text = "320ms";
+            txtAnimSpeedVal.Width = 46;
+            txtAnimSpeedVal.TextAlignment = TextAlignment.Right;
+            txtAnimSpeedVal.VerticalAlignment = VerticalAlignment.Center;
+            txtAnimSpeedVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 190, 205));
+            DockPanel.SetDock(txtAnimSpeedVal, Dock.Right);
+
+            sliderAnimSpeed = new System.Windows.Controls.Slider();
+            sliderAnimSpeed.Minimum = 150;
+            sliderAnimSpeed.Maximum = 600;
+            sliderAnimSpeed.Value = 320;
+            sliderAnimSpeed.TickFrequency = 10;
+            sliderAnimSpeed.IsSnapToTickEnabled = true;
+            sliderAnimSpeed.Margin = new Thickness(0, 0, 10, 0);
+            sliderAnimSpeed.ValueChanged += delegate {
+                widget.AnimationDurationMs = (int)Math.Round(sliderAnimSpeed.Value);
+                txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
+                SaveConfig();
+            };
+
+            dpAnimSpeed.Children.Add(txtAnimSpeedVal);
+            dpAnimSpeed.Children.Add(sliderAnimSpeed);
+
+            // Master Scale Slider
             TextBlock lblScale = CreateFieldLabel("Overall Master Scale (Resize Everything):");
             DockPanel dpMasterScale = new DockPanel();
             dpMasterScale.Margin = new Thickness(0, 0, 0, 8);
@@ -759,6 +871,7 @@ namespace GothicClock
             dpMasterScale.Children.Add(txtMasterScaleVal);
             dpMasterScale.Children.Add(sliderMasterScale);
 
+            // Quick Scale Presets
             UniformGrid gridPresets = new UniformGrid();
             gridPresets.Columns = 5;
             gridPresets.Margin = new Thickness(0, 0, 0, 10);
@@ -769,6 +882,7 @@ namespace GothicClock
             gridPresets.Children.Add(CreateSmallPresetButton("Large (120%)", 1.20));
             gridPresets.Children.Add(CreateSmallPresetButton("Huge (180%)", 1.80));
 
+            // Line Spacing Slider
             TextBlock lblSpacing = CreateFieldLabel("Vertical Gap / Spacing Between Lines:");
             DockPanel dpSpacing = new DockPanel();
 
@@ -799,6 +913,10 @@ namespace GothicClock
 
             spMaster.Children.Add(lblMaster);
             spMaster.Children.Add(btnToggleAll);
+            spMaster.Children.Add(chkEnableAnim);
+            spMaster.Children.Add(btnPreviewAnim);
+            spMaster.Children.Add(lblAnimSpeed);
+            spMaster.Children.Add(dpAnimSpeed);
             spMaster.Children.Add(lblScale);
             spMaster.Children.Add(dpMasterScale);
             spMaster.Children.Add(gridPresets);
@@ -808,12 +926,12 @@ namespace GothicClock
             content.Children.Add(cardMaster);
 
             // =================================================================
-            // CARD 2: ELEMENT 1 - TIME & ROLLING ANIMATION
+            // CARD 2: ELEMENT 1 - TIME (HOUR, MINUTE, SECOND)
             // =================================================================
             Border cardTime = CreateCard();
             StackPanel spTime = new StackPanel();
 
-            TextBlock lblTimeTitle = CreateCardHeader("Element 1: Time (Clock & Rolling Ticker)");
+            TextBlock lblTimeTitle = CreateCardHeader("Element 1: Time (Hours, Minutes, Seconds)");
 
             chkShowTime = CreateCheckBox("Show Time Element", true);
             chkShowTime.Click += delegate {
@@ -851,43 +969,6 @@ namespace GothicClock
             dpTimeSize.Children.Add(txtTimeSizeVal);
             dpTimeSize.Children.Add(sliderTimeSize);
 
-            // Animation Settings
-            chkEnableAnim = CreateCheckBox("Slide-Down Ticker Animation (Old second drops down, new enters from top)", true);
-            chkEnableAnim.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(59, 130, 246));
-            chkEnableAnim.FontWeight = FontWeights.Medium;
-            chkEnableAnim.Click += delegate {
-                widget.EnableTimeAnimation = chkEnableAnim.IsChecked == true;
-                SaveConfig();
-            };
-
-            TextBlock lblAnimSpeed = CreateFieldLabel("Animation Speed (ms):");
-            DockPanel dpAnimSpeed = new DockPanel();
-            dpAnimSpeed.Margin = new Thickness(0, 0, 0, 8);
-
-            txtAnimSpeedVal = new TextBlock();
-            txtAnimSpeedVal.Text = "320ms";
-            txtAnimSpeedVal.Width = 46;
-            txtAnimSpeedVal.TextAlignment = TextAlignment.Right;
-            txtAnimSpeedVal.VerticalAlignment = VerticalAlignment.Center;
-            txtAnimSpeedVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 190, 205));
-            DockPanel.SetDock(txtAnimSpeedVal, Dock.Right);
-
-            sliderAnimSpeed = new System.Windows.Controls.Slider();
-            sliderAnimSpeed.Minimum = 150;
-            sliderAnimSpeed.Maximum = 600;
-            sliderAnimSpeed.Value = 320;
-            sliderAnimSpeed.TickFrequency = 10;
-            sliderAnimSpeed.IsSnapToTickEnabled = true;
-            sliderAnimSpeed.Margin = new Thickness(0, 0, 10, 0);
-            sliderAnimSpeed.ValueChanged += delegate {
-                widget.AnimationDurationMs = (int)Math.Round(sliderAnimSpeed.Value);
-                txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
-                SaveConfig();
-            };
-
-            dpAnimSpeed.Children.Add(txtAnimSpeedVal);
-            dpAnimSpeed.Children.Add(sliderAnimSpeed);
-
             StackPanel spTimeOpts = new StackPanel();
             spTimeOpts.Orientation = System.Windows.Controls.Orientation.Horizontal;
 
@@ -913,9 +994,6 @@ namespace GothicClock
             spTime.Children.Add(chkShowTime);
             spTime.Children.Add(lblTimeSize);
             spTime.Children.Add(dpTimeSize);
-            spTime.Children.Add(chkEnableAnim);
-            spTime.Children.Add(lblAnimSpeed);
-            spTime.Children.Add(dpAnimSpeed);
             spTime.Children.Add(spTimeOpts);
             cardTime.Child = spTime;
             content.Children.Add(cardTime);
@@ -1376,7 +1454,7 @@ namespace GothicClock
                             else if (k == "TimeFontSize") widget.TimeFontSize = double.Parse(v);
                             else if (k == "Is12Hour") widget.Is12Hour = bool.Parse(v);
                             else if (k == "ShowSeconds") widget.ShowSeconds = bool.Parse(v);
-                            else if (k == "EnableAnim") widget.EnableTimeAnimation = bool.Parse(v);
+                            else if (k == "EnableAnim") widget.EnableAnimation = bool.Parse(v);
                             else if (k == "AnimDuration") widget.AnimationDurationMs = int.Parse(v);
                             else if (k == "ShowDay") widget.ShowDay = bool.Parse(v);
                             else if (k == "DayFontSize") widget.DayFontSize = double.Parse(v);
@@ -1392,22 +1470,21 @@ namespace GothicClock
                 catch { }
             }
 
-            // Sync controls
             sliderMasterScale.Value = widget.MasterScale;
             txtMasterScaleVal.Text = Math.Round(widget.MasterScale * 100) + "%";
 
             sliderSpacing.Value = widget.LineSpacing;
             txtSpacingVal.Text = widget.LineSpacing + "px";
 
+            chkEnableAnim.IsChecked = widget.EnableAnimation;
+            sliderAnimSpeed.Value = widget.AnimationDurationMs;
+            txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
+
             chkShowTime.IsChecked = widget.ShowTime;
             sliderTimeSize.Value = widget.TimeFontSize;
             txtTimeSizeVal.Text = widget.TimeFontSize + "px";
             chk12Hour.IsChecked = widget.Is12Hour;
             chkShowSeconds.IsChecked = widget.ShowSeconds;
-
-            chkEnableAnim.IsChecked = widget.EnableTimeAnimation;
-            sliderAnimSpeed.Value = widget.AnimationDurationMs;
-            txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
 
             chkShowDay.IsChecked = widget.ShowDay;
             sliderDaySize.Value = widget.DayFontSize;
@@ -1455,7 +1532,7 @@ namespace GothicClock
                     sw.WriteLine("TimeFontSize=" + widget.TimeFontSize);
                     sw.WriteLine("Is12Hour=" + widget.Is12Hour);
                     sw.WriteLine("ShowSeconds=" + widget.ShowSeconds);
-                    sw.WriteLine("EnableAnim=" + widget.EnableTimeAnimation);
+                    sw.WriteLine("EnableAnim=" + widget.EnableAnimation);
                     sw.WriteLine("AnimDuration=" + widget.AnimationDurationMs);
                     sw.WriteLine("ShowDay=" + widget.ShowDay);
                     sw.WriteLine("DayFontSize=" + widget.DayFontSize);
@@ -1539,56 +1616,76 @@ namespace GothicClock
         [STAThread]
         public static void Main(string[] args)
         {
-            bool isSilent = false;
-            if (args != null && args.Length > 0)
+            AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e) {
+                try {
+                    File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), e.ExceptionObject != null ? e.ExceptionObject.ToString() : "Unknown crash");
+                } catch { }
+            };
+
+            try
             {
-                for (int i = 0; i < args.Length; i++)
+                bool isSilent = false;
+                if (args != null && args.Length > 0)
                 {
-                    if (args[i] == "--silent") isSilent = true;
+                    for (int i = 0; i < args.Length; i++)
+                    {
+                        if (args[i] == "--silent") isSilent = true;
+                    }
                 }
-            }
 
-            System.Diagnostics.Process current = System.Diagnostics.Process.GetCurrentProcess();
-            System.Diagnostics.Process[] running = System.Diagnostics.Process.GetProcessesByName(current.ProcessName);
-            if (running.Length > 1)
+                System.Diagnostics.Process current = System.Diagnostics.Process.GetCurrentProcess();
+                System.Diagnostics.Process[] running = System.Diagnostics.Process.GetProcessesByName(current.ProcessName);
+                if (running.Length > 1)
+                {
+                    try
+                    {
+                        EventWaitHandle ev = EventWaitHandle.OpenExisting("GothicClockShowControlPanelEvent");
+                        ev.Set();
+                    }
+                    catch { }
+                    return;
+                }
+
+                EventWaitHandle showEventHandle = new EventWaitHandle(false, EventResetMode.AutoReset, "GothicClockShowControlPanelEvent");
+
+                System.Windows.Application app = new System.Windows.Application();
+                app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                app.DispatcherUnhandledException += delegate(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e) {
+                    try {
+                        File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), e.Exception != null ? e.Exception.ToString() : "Dispatcher crash");
+                    } catch { }
+                };
+
+                WidgetWindow widget = new WidgetWindow();
+                ControlPanelWindow controlPanel = new ControlPanelWindow(widget);
+
+                Thread listenThread = new Thread(new ThreadStart(delegate {
+                    while (true)
+                    {
+                        showEventHandle.WaitOne();
+                        app.Dispatcher.BeginInvoke(new Action(delegate {
+                            controlPanel.Show();
+                            controlPanel.WindowState = WindowState.Normal;
+                            controlPanel.Activate();
+                        }));
+                    }
+                }));
+                listenThread.IsBackground = true;
+                listenThread.Start();
+
+                if (!isSilent)
+                {
+                    controlPanel.Show();
+                }
+
+                app.Run();
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    EventWaitHandle ev = EventWaitHandle.OpenExisting("GothicClockShowControlPanelEvent");
-                    ev.Set();
-                }
-                catch { }
-                return;
+                try {
+                    File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"), ex.ToString());
+                } catch { }
             }
-
-            EventWaitHandle showEventHandle = new EventWaitHandle(false, EventResetMode.AutoReset, "GothicClockShowControlPanelEvent");
-
-            System.Windows.Application app = new System.Windows.Application();
-            app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-
-            WidgetWindow widget = new WidgetWindow();
-            ControlPanelWindow controlPanel = new ControlPanelWindow(widget);
-
-            Thread listenThread = new Thread(new ThreadStart(delegate {
-                while (true)
-                {
-                    showEventHandle.WaitOne();
-                    app.Dispatcher.BeginInvoke(new Action(delegate {
-                        controlPanel.Show();
-                        controlPanel.WindowState = WindowState.Normal;
-                        controlPanel.Activate();
-                    }));
-                }
-            }));
-            listenThread.IsBackground = true;
-            listenThread.Start();
-
-            if (!isSilent)
-            {
-                controlPanel.Show();
-            }
-
-            app.Run();
         }
     }
 }
