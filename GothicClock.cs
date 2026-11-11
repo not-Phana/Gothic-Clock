@@ -1228,6 +1228,21 @@ namespace GothicClock
             spTitleLeft.VerticalAlignment = VerticalAlignment.Center;
             spTitleLeft.Margin = new Thickness(12, 0, 0, 0);
 
+            string titleIconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+            if (File.Exists(titleIconPath))
+            {
+                try
+                {
+                    System.Windows.Controls.Image titleImg = new System.Windows.Controls.Image();
+                    titleImg.Width = 18;
+                    titleImg.Height = 18;
+                    titleImg.Margin = new Thickness(0, 0, 8, 0);
+                    titleImg.Source = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri(titleIconPath));
+                    spTitleLeft.Children.Add(titleImg);
+                }
+                catch { }
+            }
+
             TextBlock tbPrefix = new TextBlock();
             tbPrefix.Text = "SYS // ";
             tbPrefix.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
@@ -2105,6 +2120,7 @@ namespace GothicClock
             string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
             if (File.Exists(iconPath))
             {
+                try { this.Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri(iconPath)); } catch { }
                 try { trayIcon.Icon = new Icon(iconPath); } catch { trayIcon.Icon = SystemIcons.Application; }
             }
             else
