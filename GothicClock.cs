@@ -992,6 +992,182 @@ namespace GothicClock
                         </Setter.Value>
                     </Setter>
                 </Style>
+
+                <Style TargetType=""ComboBoxItem"">
+                    <Setter Property=""SnapsToDevicePixels"" Value=""True"" />
+                    <Setter Property=""Foreground"" Value=""#C8D8ED"" />
+                    <Setter Property=""Background"" Value=""#090B12"" />
+                    <Setter Property=""FontFamily"" Value=""Consolas, monospace"" />
+                    <Setter Property=""FontSize"" Value=""11"" />
+                    <Setter Property=""Padding"" Value=""10,6,10,6"" />
+                    <Setter Property=""Template"">
+                        <Setter.Value>
+                            <ControlTemplate TargetType=""ComboBoxItem"">
+                                <Border Name=""ItemBorder""
+                                    Padding=""{TemplateBinding Padding}""
+                                    Background=""{TemplateBinding Background}""
+                                    BorderBrush=""Transparent""
+                                    BorderThickness=""0,0,0,1"">
+                                    <ContentPresenter />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property=""IsHighlighted"" Value=""True"">
+                                        <Setter TargetName=""ItemBorder"" Property=""Background"" Value=""#162035"" />
+                                        <Setter TargetName=""ItemBorder"" Property=""BorderBrush"" Value=""#00F0FF"" />
+                                        <Setter Property=""Foreground"" Value=""#FFE600"" />
+                                    </Trigger>
+                                    <Trigger Property=""IsSelected"" Value=""True"">
+                                        <Setter TargetName=""ItemBorder"" Property=""Background"" Value=""#1A2844"" />
+                                        <Setter TargetName=""ItemBorder"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                        <Setter Property=""Foreground"" Value=""#00F0FF"" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+
+                <Style TargetType=""ComboBox"">
+                    <Setter Property=""Foreground"" Value=""#00F0FF"" />
+                    <Setter Property=""FontFamily"" Value=""Consolas, monospace"" />
+                    <Setter Property=""FontSize"" Value=""11"" />
+                    <Setter Property=""FontWeight"" Value=""SemiBold"" />
+                    <Setter Property=""Height"" Value=""30"" />
+                    <Setter Property=""SnapsToDevicePixels"" Value=""True"" />
+                    <Setter Property=""Template"">
+                        <Setter.Value>
+                            <ControlTemplate TargetType=""ComboBox"">
+                                <Grid>
+                                    <ToggleButton Name=""ToggleButton""
+                                        Background=""#0B0E17""
+                                        BorderBrush=""#00F0FF""
+                                        BorderThickness=""1""
+                                        Focusable=""False""
+                                        IsChecked=""{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}""
+                                        ClickMode=""Press"">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType=""ToggleButton"">
+                                                <Border Name=""Border""
+                                                    Background=""{TemplateBinding Background}""
+                                                    BorderBrush=""{TemplateBinding BorderBrush}""
+                                                    BorderThickness=""{TemplateBinding BorderThickness}""
+                                                    CornerRadius=""2""
+                                                    Padding=""10,4,8,4"">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width=""*"" />
+                                                            <ColumnDefinition Width=""20"" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Path Grid.Column=""1""
+                                                            HorizontalAlignment=""Center""
+                                                            VerticalAlignment=""Center""
+                                                            Data=""M 0 0 L 4 4 L 8 0 Z""
+                                                            Fill=""#00F0FF"" />
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property=""IsMouseOver"" Value=""True"">
+                                                        <Setter TargetName=""Border"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                                        <Setter TargetName=""Border"" Property=""Background"" Value=""#121826"" />
+                                                    </Trigger>
+                                                    <Trigger Property=""IsChecked"" Value=""True"">
+                                                        <Setter TargetName=""Border"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                    <ContentPresenter Name=""ContentSite""
+                                        IsHitTestVisible=""False""
+                                        Content=""{TemplateBinding SelectionBoxItem}""
+                                        ContentTemplate=""{TemplateBinding SelectionBoxItemTemplate}""
+                                        ContentTemplateSelector=""{TemplateBinding ItemTemplateSelector}""
+                                        Margin=""10,0,24,0""
+                                        VerticalAlignment=""Center""
+                                        HorizontalAlignment=""Left"" />
+                                    <Popup Name=""PART_Popup""
+                                        Placement=""Bottom""
+                                        IsOpen=""{TemplateBinding IsDropDownOpen}""
+                                        AllowsTransparency=""True""
+                                        Focusable=""False""
+                                        PopupAnimation=""Slide"">
+                                        <Grid Name=""DropDown""
+                                            SnapsToDevicePixels=""True""
+                                            MinWidth=""{TemplateBinding ActualWidth}""
+                                            MaxHeight=""{TemplateBinding MaxDropDownHeight}"">
+                                            <Border Name=""DropDownBorder""
+                                                Background=""#080A12""
+                                                BorderBrush=""#00F0FF""
+                                                BorderThickness=""1""
+                                                CornerRadius=""2""
+                                                Margin=""0,2,0,4"">
+                                                <Border.Effect>
+                                                    <DropShadowEffect Color=""#00F0FF"" BlurRadius=""12"" ShadowDepth=""0"" Opacity=""0.5"" />
+                                                </Border.Effect>
+                                                <ScrollViewer Margin=""2"" SnapsToDevicePixels=""True"">
+                                                    <StackPanel IsItemsHost=""True"" KeyboardNavigation.DirectionalNavigation=""Contained"" />
+                                                </ScrollViewer>
+                                            </Border>
+                                        </Grid>
+                                    </Popup>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+
+                <Style TargetType=""CheckBox"">
+                    <Setter Property=""Foreground"" Value=""#C8D4E5"" />
+                    <Setter Property=""FontFamily"" Value=""Consolas, Segoe UI, sans-serif"" />
+                    <Setter Property=""FontSize"" Value=""11"" />
+                    <Setter Property=""Cursor"" Value=""Hand"" />
+                    <Setter Property=""Margin"" Value=""0,3,0,5"" />
+                    <Setter Property=""Template"">
+                        <Setter.Value>
+                            <ControlTemplate TargetType=""CheckBox"">
+                                <Grid Background=""Transparent"">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width=""Auto"" />
+                                        <ColumnDefinition Width=""*"" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Name=""Box""
+                                        Grid.Column=""0""
+                                        Width=""16""
+                                        Height=""16""
+                                        Background=""#0A0D16""
+                                        BorderBrush=""#00F0FF""
+                                        BorderThickness=""1.2""
+                                        CornerRadius=""2""
+                                        VerticalAlignment=""Center"">
+                                        <Path Name=""CheckMark""
+                                            Data=""M 3 7 L 6 10 L 12 3""
+                                            Stroke=""#FFE600""
+                                            StrokeThickness=""2""
+                                            StrokeStartLineCap=""Round""
+                                            StrokeEndLineCap=""Round""
+                                            StrokeLineJoin=""Round""
+                                            Visibility=""Collapsed"" />
+                                    </Border>
+                                    <ContentPresenter
+                                        Grid.Column=""1""
+                                        Margin=""8,0,0,0""
+                                        VerticalAlignment=""Center""
+                                        HorizontalAlignment=""Left"" />
+                                </Grid>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property=""IsChecked"" Value=""True"">
+                                        <Setter TargetName=""CheckMark"" Property=""Visibility"" Value=""Visible"" />
+                                        <Setter TargetName=""Box"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                        <Setter TargetName=""Box"" Property=""Background"" Value=""#121824"" />
+                                    </Trigger>
+                                    <Trigger Property=""IsMouseOver"" Value=""True"">
+                                        <Setter TargetName=""Box"" Property=""BorderBrush"" Value=""#FFE600"" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
             </ResourceDictionary>";
 
             try
@@ -1002,7 +1178,12 @@ namespace GothicClock
                     this.Resources.MergedDictionaries.Add(rd);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                try {
+                    File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "xaml_error.log"), ex.ToString());
+                } catch { }
+            }
         }
 
         private void BuildUI()
