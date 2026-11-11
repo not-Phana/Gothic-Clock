@@ -1,0 +1,13 @@
+# User configuration and runtime files
+settings.ini
+error.log
+*.log
+
+# Compiled binaries
+*.exe
+*.dll
+*.pdb
+
+# Build output
+bin/
+obj/
