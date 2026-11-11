@@ -1068,8 +1068,8 @@ namespace GothicClock
             this.AllowsTransparency = true;
             this.Background = System.Windows.Media.Brushes.Transparent;
             this.Title = "Gothic Clock - Mainframe";
-            this.Width = 440;
-            this.Height = 780;
+            this.Width = 460;
+            this.Height = 800;
             this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             this.ResizeMode = ResizeMode.CanMinimize;
 
@@ -1288,6 +1288,8 @@ namespace GothicClock
             Grid rootGrid = new Grid();
             rootGrid.Width = 440;
             rootGrid.Height = 780;
+            rootGrid.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            rootGrid.VerticalAlignment = VerticalAlignment.Center;
 
             // Cyberpunk Chamfered Outer Frame (22px 45-deg cuts top-left and bottom-right)
             System.Windows.Shapes.Path bgFrame = new System.Windows.Shapes.Path();
@@ -1967,6 +1969,8 @@ namespace GothicClock
 
             scroll.Content = content;
             mainDock.Children.Add(scroll);
+
+            this.Content = rootGrid;
         }
 
         private void ApplyMasterActive()
@@ -1975,27 +1979,34 @@ namespace GothicClock
             {
                 widget.Show();
                 widget.AttachToDesktop();
-                btnHeaderStatus.Content = "Widget: ON";
-                btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-                btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 32, 40));
-                btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 229, 255));
+                if (btnHeaderStatus != null)
+                {
+                    btnHeaderStatus.Content = "Widget: ON";
+                    btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+                    btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 32, 40));
+                    btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 229, 255));
+                }
             }
             else
             {
                 widget.Hide();
-                btnHeaderStatus.Content = "Widget: OFF";
-                btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 77, 109));
-                btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 10, 18));
-                btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 24, 38));
+                if (btnHeaderStatus != null)
+                {
+                    btnHeaderStatus.Content = "Widget: OFF";
+                    btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 77, 109));
+                    btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 10, 18));
+                    btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 24, 38));
+                }
             }
         }
 
         private void SelectTheme(string key)
         {
+            if (string.IsNullOrEmpty(key)) key = "Getsuga";
             widget.SetGlowTheme(key);
             foreach (var item in themeItems)
             {
-                item.SetSelected(item.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                item.SetSelected(item.Key != null && item.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
             }
             SaveConfig();
         }
