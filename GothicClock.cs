@@ -30,6 +30,7 @@ namespace GothicClock
         public TranslateTransform TransCurrent;
         public TranslateTransform TransIncoming;
         private string lastText = "";
+        public string MotionStyle = "Spring";
 
         public RollingBox(System.Windows.Media.FontFamily font, double fontSize, SolidColorBrush brush, DropShadowEffect effect)
         {
@@ -62,6 +63,29 @@ namespace GothicClock
 
             Container.Children.Add(TxtCurrent);
             Container.Children.Add(TxtIncoming);
+        }
+
+        public void ApplyStyle(SolidColorBrush textBrush, System.Windows.Media.Color glowColor, double glowRadius, double shadowDepth, double opacity, string motionStyle)
+        {
+            MotionStyle = motionStyle;
+            TxtCurrent.Foreground = textBrush;
+            TxtIncoming.Foreground = textBrush;
+
+            DropShadowEffect e1 = new DropShadowEffect();
+            e1.Color = glowColor;
+            e1.BlurRadius = glowRadius;
+            e1.ShadowDepth = shadowDepth;
+            e1.Opacity = opacity;
+            e1.Direction = 315;
+            TxtCurrent.Effect = e1;
+
+            DropShadowEffect e2 = new DropShadowEffect();
+            e2.Color = glowColor;
+            e2.BlurRadius = glowRadius;
+            e2.ShadowDepth = shadowDepth;
+            e2.Opacity = opacity;
+            e2.Direction = 315;
+            TxtIncoming.Effect = e2;
         }
 
         public void SetFontSize(double size)
@@ -117,7 +141,23 @@ namespace GothicClock
             TxtIncoming.Opacity = 0.0;
 
             Duration dur = new Duration(TimeSpan.FromMilliseconds(durationMs));
-            CubicEase ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            IEasingFunction ease;
+            if (MotionStyle == "Spring")
+            {
+                ease = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.35 };
+            }
+            else if (MotionStyle == "Bounce")
+            {
+                ease = new BounceEase { EasingMode = EasingMode.EaseOut, Bounces = 1, Bounciness = 2 };
+            }
+            else if (MotionStyle == "Linear")
+            {
+                ease = null;
+            }
+            else
+            {
+                ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            }
 
             DoubleAnimation animOutY = new DoubleAnimation(0, travelDistance, dur) { EasingFunction = ease };
             DoubleAnimation animOutOp = new DoubleAnimation(1.0, 0.0, dur) { EasingFunction = ease };
@@ -243,6 +283,20 @@ namespace GothicClock
         public bool IsMoveMode = false;
         public bool StayOnDesktop = true;
 
+        // Gothic Visual FX & Aura
+        public string GlowTheme = "Moonlight";
+        public double GlowRadius = 16;
+        public double GlowOpacity = 0.85;
+        public string MotionStyle = "Spring";
+        public string ColonStyle = "Breath";
+        public bool ShowDivider = true;
+        public bool ShowGlassBackplate = false;
+
+        private Grid dividerGrid;
+        private System.Windows.Shapes.Polygon diamondCenter;
+        private System.Windows.Shapes.Rectangle lineLeft;
+        private System.Windows.Shapes.Rectangle lineRight;
+
         public WidgetWindow()
         {
             this.WindowStyle = WindowStyle.None;
@@ -266,6 +320,68 @@ namespace GothicClock
             this.Loaded += delegate {
                 AttachToDesktop();
             };
+        }
+
+        private void BuildDivider()
+        {
+            dividerGrid = new Grid();
+            dividerGrid.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            dividerGrid.Height = 14;
+            dividerGrid.Width = 240;
+            dividerGrid.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
+
+            lineLeft = new System.Windows.Shapes.Rectangle();
+            lineLeft.Height = 1.2;
+            lineLeft.Width = 100;
+            lineLeft.HorizontalAlignment = System.Windows.HorizontalAlignment.Left;
+            lineLeft.VerticalAlignment = VerticalAlignment.Center;
+
+            lineRight = new System.Windows.Shapes.Rectangle();
+            lineRight.Height = 1.2;
+            lineRight.Width = 100;
+            lineRight.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
+            lineRight.VerticalAlignment = VerticalAlignment.Center;
+
+            diamondCenter = new System.Windows.Shapes.Polygon();
+            PointCollection pts = new PointCollection();
+            pts.Add(new System.Windows.Point(5, 0));
+            pts.Add(new System.Windows.Point(10, 5));
+            pts.Add(new System.Windows.Point(5, 10));
+            pts.Add(new System.Windows.Point(0, 5));
+            diamondCenter.Points = pts;
+            diamondCenter.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            diamondCenter.VerticalAlignment = VerticalAlignment.Center;
+
+            dividerGrid.Children.Add(lineLeft);
+            dividerGrid.Children.Add(diamondCenter);
+            dividerGrid.Children.Add(lineRight);
+        }
+
+        public void UpdateDividerColors(SolidColorBrush textBrush, System.Windows.Media.Color glowColor)
+        {
+            if (lineLeft == null || lineRight == null || diamondCenter == null) return;
+
+            LinearGradientBrush brushLeft = new LinearGradientBrush();
+            brushLeft.StartPoint = new System.Windows.Point(0, 0.5);
+            brushLeft.EndPoint = new System.Windows.Point(1, 0.5);
+            brushLeft.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(0, glowColor.R, glowColor.G, glowColor.B), 0.0));
+            brushLeft.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(210, glowColor.R, glowColor.G, glowColor.B), 1.0));
+            lineLeft.Fill = brushLeft;
+
+            LinearGradientBrush brushRight = new LinearGradientBrush();
+            brushRight.StartPoint = new System.Windows.Point(0, 0.5);
+            brushRight.EndPoint = new System.Windows.Point(1, 0.5);
+            brushRight.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(210, glowColor.R, glowColor.G, glowColor.B), 0.0));
+            brushRight.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(0, glowColor.R, glowColor.G, glowColor.B), 1.0));
+            lineRight.Fill = brushRight;
+
+            diamondCenter.Fill = textBrush;
+            DropShadowEffect eff = new DropShadowEffect();
+            eff.Color = glowColor;
+            eff.BlurRadius = 8;
+            eff.ShadowDepth = 0;
+            eff.Opacity = 0.9;
+            diamondCenter.Effect = eff;
         }
 
         private void BuildUI()
@@ -323,6 +439,9 @@ namespace GothicClock
             timePanel.Children.Add(BoxSec.Container);
             timePanel.Children.Add(BoxAmPm.Container);
 
+            // Ornate Divider
+            BuildDivider();
+
             // =================================================================
             // DAY & DATE WITH ROLLING TICKER SUPPORT
             // =================================================================
@@ -332,6 +451,7 @@ namespace GothicClock
             BoxDate = new RollingBox(gothicFont, DateFontSize, textBrush, shadow);
 
             stack.Children.Add(timePanel);
+            stack.Children.Add(dividerGrid);
             stack.Children.Add(BoxDay.Container);
             stack.Children.Add(BoxDate.Container);
 
@@ -356,9 +476,117 @@ namespace GothicClock
             };
         }
 
+        public void SetGlowTheme(string theme)
+        {
+            GlowTheme = theme;
+            SolidColorBrush textBrush;
+            System.Windows.Media.Color glowColor;
+
+            if (theme == "Crimson")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 240, 243));
+                glowColor = System.Windows.Media.Color.FromRgb(255, 26, 64);
+            }
+            else if (theme == "Violet")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(250, 245, 255));
+                glowColor = System.Windows.Media.Color.FromRgb(168, 85, 247);
+            }
+            else if (theme == "Cyan")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 253, 255));
+                glowColor = System.Windows.Media.Color.FromRgb(0, 229, 255);
+            }
+            else if (theme == "Gold")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 253, 240));
+                glowColor = System.Windows.Media.Color.FromRgb(255, 184, 0);
+            }
+            else if (theme == "Stealth")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(242, 245, 245));
+                glowColor = Colors.Black;
+            }
+            else // "Moonlight"
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255));
+                glowColor = System.Windows.Media.Color.FromRgb(150, 180, 215);
+            }
+
+            double depth = (theme == "Stealth") ? 1.5 : 0;
+            double op = (theme == "Stealth") ? 0.9 : GlowOpacity;
+            double rad = (theme == "Stealth" && GlowRadius > 6) ? 3 : GlowRadius;
+
+            BoxHour.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
+            BoxMin.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
+            BoxSec.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
+            BoxAmPm.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
+            BoxDay.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
+            BoxDate.ApplyStyle(textBrush, glowColor, rad, depth, op, MotionStyle);
+
+            txtColon1.Foreground = textBrush;
+            DropShadowEffect cEff1 = new DropShadowEffect();
+            cEff1.Color = glowColor;
+            cEff1.BlurRadius = rad;
+            cEff1.ShadowDepth = depth;
+            cEff1.Opacity = op;
+            txtColon1.Effect = cEff1;
+
+            txtColon2.Foreground = textBrush;
+            DropShadowEffect cEff2 = new DropShadowEffect();
+            cEff2.Color = glowColor;
+            cEff2.BlurRadius = rad;
+            cEff2.ShadowDepth = depth;
+            cEff2.Opacity = op;
+            txtColon2.Effect = cEff2;
+
+            UpdateDividerColors(textBrush, glowColor);
+        }
+
+        public void UpdateColonAnimation()
+        {
+            if (ColonStyle == "Breath")
+            {
+                DoubleAnimation anim = new DoubleAnimation(1.0, 0.25, new Duration(TimeSpan.FromMilliseconds(550)));
+                anim.AutoReverse = true;
+                anim.RepeatBehavior = RepeatBehavior.Forever;
+                anim.EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut };
+
+                txtColon1.BeginAnimation(UIElement.OpacityProperty, anim);
+                txtColon2.BeginAnimation(UIElement.OpacityProperty, anim);
+            }
+            else
+            {
+                txtColon1.BeginAnimation(UIElement.OpacityProperty, null);
+                txtColon2.BeginAnimation(UIElement.OpacityProperty, null);
+                txtColon1.Opacity = 1.0;
+                txtColon2.Opacity = 1.0;
+            }
+        }
+
+        public void SetGlassPlate(bool enable)
+        {
+            ShowGlassBackplate = enable;
+            if (enable)
+            {
+                mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(145, 14, 16, 22));
+                mainBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(55, 255, 255, 255));
+                mainBorder.CornerRadius = new CornerRadius(12);
+                mainBorder.Padding = new Thickness(22, 12, 22, 14);
+            }
+            else
+            {
+                mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
+                mainBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                mainBorder.CornerRadius = new CornerRadius(4);
+                mainBorder.Padding = new Thickness(8, 4, 8, 4);
+            }
+        }
+
         public void RefreshAppearance()
         {
             timePanel.Visibility = ShowTime ? Visibility.Visible : Visibility.Collapsed;
+            dividerGrid.Visibility = ShowDivider ? Visibility.Visible : Visibility.Collapsed;
             BoxDay.Container.Visibility = ShowDay ? Visibility.Visible : Visibility.Collapsed;
             BoxDate.Container.Visibility = ShowDate ? Visibility.Visible : Visibility.Collapsed;
 
@@ -376,10 +604,15 @@ namespace GothicClock
             BoxDay.SetFontSize(DayFontSize);
             BoxDate.SetFontSize(DateFontSize);
 
+            dividerGrid.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
             BoxDay.Container.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
 
             scaleTransform.ScaleX = MasterScale;
             scaleTransform.ScaleY = MasterScale;
+
+            SetGlassPlate(ShowGlassBackplate);
+            SetGlowTheme(GlowTheme);
+            UpdateColonAnimation();
 
             UpdateClock();
         }
@@ -406,8 +639,7 @@ namespace GothicClock
             }
             else
             {
-                mainBorder.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
+                SetGlassPlate(ShowGlassBackplate);
                 this.Cursor = System.Windows.Input.Cursors.Arrow;
                 this.Topmost = false;
                 AttachToDesktop();
@@ -434,6 +666,14 @@ namespace GothicClock
         private void UpdateClock()
         {
             DateTime now = DateTime.Now;
+
+            // Colon blink mode
+            if (ColonStyle == "Blink")
+            {
+                double op = (now.Second % 2 == 0) ? 1.0 : 0.0;
+                txtColon1.Opacity = op;
+                txtColon2.Opacity = op;
+            }
 
             // 1. Time Update
             if (ShowTime)
@@ -561,6 +801,14 @@ namespace GothicClock
         private System.Windows.Controls.CheckBox chkEnableAnim;
         private System.Windows.Controls.Slider sliderAnimSpeed;
         private TextBlock txtAnimSpeedVal;
+
+        // Card: Gothic Aura & Visual Effects
+        private System.Windows.Controls.Slider sliderGlowRadius;
+        private TextBlock txtGlowRadiusVal;
+        private System.Windows.Controls.ComboBox cmbMotionStyle;
+        private System.Windows.Controls.ComboBox cmbColonStyle;
+        private System.Windows.Controls.CheckBox chkShowDivider;
+        private System.Windows.Controls.CheckBox chkGlassPlate;
 
         // Element 1: Time
         private System.Windows.Controls.CheckBox chkShowTime;
@@ -926,7 +1174,123 @@ namespace GothicClock
             content.Children.Add(cardMaster);
 
             // =================================================================
-            // CARD 2: ELEMENT 1 - TIME (HOUR, MINUTE, SECOND)
+            // CARD 2: GOTHIC AURA & VISUAL EFFECTS (BLOOM, MOTION PHYSICS, PULSE)
+            // =================================================================
+            Border cardFX = CreateCard();
+            StackPanel spFX = new StackPanel();
+
+            TextBlock lblFXTitle = CreateCardHeader("Gothic Aura & Visual Effects");
+            spFX.Children.Add(lblFXTitle);
+
+            TextBlock lblPresets = CreateFieldLabel("Aura Glow & Color Theme Presets:");
+            spFX.Children.Add(lblPresets);
+
+            UniformGrid gridGlowThemes = new UniformGrid();
+            gridGlowThemes.Columns = 3;
+            gridGlowThemes.Margin = new Thickness(0, 0, 0, 10);
+
+            gridGlowThemes.Children.Add(CreateThemeButton("Moonlight", System.Windows.Media.Color.FromRgb(150, 180, 215), "Moonlight"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Blood Crimson", System.Windows.Media.Color.FromRgb(255, 26, 64), "Crimson"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Phantom Violet", System.Windows.Media.Color.FromRgb(168, 85, 247), "Violet"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Eldritch Cyan", System.Windows.Media.Color.FromRgb(0, 229, 255), "Cyan"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Cathedral Gold", System.Windows.Media.Color.FromRgb(255, 184, 0), "Gold"));
+            gridGlowThemes.Children.Add(CreateThemeButton("Stealth Black", System.Windows.Media.Color.FromRgb(40, 44, 52), "Stealth"));
+            spFX.Children.Add(gridGlowThemes);
+
+            // Glow Radius Slider
+            TextBlock lblGlowRad = CreateFieldLabel("Aura Bloom / Glow Radius:");
+            DockPanel dpGlowRad = new DockPanel();
+            dpGlowRad.Margin = new Thickness(0, 0, 0, 8);
+
+            txtGlowRadiusVal = new TextBlock();
+            txtGlowRadiusVal.Text = "16px";
+            txtGlowRadiusVal.Width = 46;
+            txtGlowRadiusVal.TextAlignment = TextAlignment.Right;
+            txtGlowRadiusVal.VerticalAlignment = VerticalAlignment.Center;
+            txtGlowRadiusVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 190, 205));
+            DockPanel.SetDock(txtGlowRadiusVal, Dock.Right);
+
+            sliderGlowRadius = new System.Windows.Controls.Slider();
+            sliderGlowRadius.Minimum = 0;
+            sliderGlowRadius.Maximum = 40;
+            sliderGlowRadius.Value = 16;
+            sliderGlowRadius.TickFrequency = 1;
+            sliderGlowRadius.IsSnapToTickEnabled = true;
+            sliderGlowRadius.Margin = new Thickness(0, 0, 10, 0);
+            sliderGlowRadius.ValueChanged += delegate {
+                widget.GlowRadius = Math.Round(sliderGlowRadius.Value);
+                txtGlowRadiusVal.Text = widget.GlowRadius + "px";
+                widget.SetGlowTheme(widget.GlowTheme);
+                SaveConfig();
+            };
+
+            dpGlowRad.Children.Add(txtGlowRadiusVal);
+            dpGlowRad.Children.Add(sliderGlowRadius);
+            spFX.Children.Add(lblGlowRad);
+            spFX.Children.Add(dpGlowRad);
+
+            // Motion Easing Style
+            TextBlock lblMotion = CreateFieldLabel("Animation Motion Physics:");
+            cmbMotionStyle = new System.Windows.Controls.ComboBox();
+            cmbMotionStyle.Items.Add("Tactile Spring Snap (Overshoot Bounce)");
+            cmbMotionStyle.Items.Add("Smooth Fluid Glide (Cubic Ease)");
+            cmbMotionStyle.Items.Add("Micro Bounce");
+            cmbMotionStyle.Items.Add("Classic Linear");
+            cmbMotionStyle.SelectedIndex = 0;
+            cmbMotionStyle.Margin = new Thickness(0, 0, 0, 8);
+            cmbMotionStyle.SelectionChanged += delegate {
+                if (cmbMotionStyle.SelectedIndex == 0) widget.MotionStyle = "Spring";
+                else if (cmbMotionStyle.SelectedIndex == 1) widget.MotionStyle = "Smooth";
+                else if (cmbMotionStyle.SelectedIndex == 2) widget.MotionStyle = "Bounce";
+                else if (cmbMotionStyle.SelectedIndex == 3) widget.MotionStyle = "Linear";
+                widget.SetGlowTheme(widget.GlowTheme);
+                SaveConfig();
+            };
+            spFX.Children.Add(lblMotion);
+            spFX.Children.Add(cmbMotionStyle);
+
+            // Colon Pulse Style
+            TextBlock lblColon = CreateFieldLabel("Colon (:) Pulse Effect:");
+            cmbColonStyle = new System.Windows.Controls.ComboBox();
+            cmbColonStyle.Items.Add("Smooth Breathing Pulse (Hypnotic Sine-Wave)");
+            cmbColonStyle.Items.Add("1-Second Rhythm Blink");
+            cmbColonStyle.Items.Add("Solid (Static)");
+            cmbColonStyle.SelectedIndex = 0;
+            cmbColonStyle.Margin = new Thickness(0, 0, 0, 8);
+            cmbColonStyle.SelectionChanged += delegate {
+                if (cmbColonStyle.SelectedIndex == 0) widget.ColonStyle = "Breath";
+                else if (cmbColonStyle.SelectedIndex == 1) widget.ColonStyle = "Blink";
+                else if (cmbColonStyle.SelectedIndex == 2) widget.ColonStyle = "Solid";
+                widget.UpdateColonAnimation();
+                SaveConfig();
+            };
+            spFX.Children.Add(lblColon);
+            spFX.Children.Add(cmbColonStyle);
+
+            // Gothic Divider Checkbox
+            chkShowDivider = CreateCheckBox("Ornate Gothic Diamond Filigree Divider", true);
+            chkShowDivider.Margin = new Thickness(0, 4, 0, 4);
+            chkShowDivider.Click += delegate {
+                widget.ShowDivider = chkShowDivider.IsChecked == true;
+                widget.RefreshAppearance();
+                SaveConfig();
+            };
+            spFX.Children.Add(chkShowDivider);
+
+            // Frosted Glass Plate Checkbox
+            chkGlassPlate = CreateCheckBox("Frosted Smoked Glass Acrylic Plate (Contrast Backdrop)", false);
+            chkGlassPlate.Margin = new Thickness(0, 4, 0, 4);
+            chkGlassPlate.Click += delegate {
+                widget.SetGlassPlate(chkGlassPlate.IsChecked == true);
+                SaveConfig();
+            };
+            spFX.Children.Add(chkGlassPlate);
+
+            cardFX.Child = spFX;
+            content.Children.Add(cardFX);
+
+            // =================================================================
+            // CARD 3: ELEMENT 1 - TIME (HOUR, MINUTE, SECOND)
             // =================================================================
             Border cardTime = CreateCard();
             StackPanel spTime = new StackPanel();
@@ -1355,6 +1719,53 @@ namespace GothicClock
             return btn;
         }
 
+        private System.Windows.Controls.Button CreateThemeButton(string label, System.Windows.Media.Color accentColor, string themeKey)
+        {
+            System.Windows.Controls.Button btn = new System.Windows.Controls.Button();
+            btn.Height = 32;
+            btn.Margin = new Thickness(2, 3, 2, 3);
+            btn.Cursor = System.Windows.Input.Cursors.Hand;
+            btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 30, 38));
+            btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(140, accentColor.R, accentColor.G, accentColor.B));
+            btn.BorderThickness = new Thickness(1);
+
+            StackPanel sp = new StackPanel();
+            sp.Orientation = System.Windows.Controls.Orientation.Horizontal;
+            sp.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+
+            Border dot = new Border();
+            dot.Width = 8;
+            dot.Height = 8;
+            dot.CornerRadius = new CornerRadius(4);
+            dot.Background = new SolidColorBrush(accentColor);
+            dot.Margin = new Thickness(0, 0, 6, 0);
+
+            TextBlock tb = new TextBlock();
+            tb.Text = label;
+            tb.FontSize = 10.5;
+            tb.FontWeight = FontWeights.Medium;
+            tb.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 226, 235));
+
+            sp.Children.Add(dot);
+            sp.Children.Add(tb);
+            btn.Content = sp;
+
+            btn.Click += delegate {
+                widget.SetGlowTheme(themeKey);
+                if (themeKey == "Stealth")
+                {
+                    sliderGlowRadius.Value = 3;
+                }
+                else if (sliderGlowRadius.Value < 8)
+                {
+                    sliderGlowRadius.Value = 16;
+                }
+                SaveConfig();
+            };
+
+            return btn;
+        }
+
         private void SetupTray()
         {
             trayIcon = new NotifyIcon();
@@ -1464,6 +1875,12 @@ namespace GothicClock
                             else if (k == "DateFormat") widget.DateFormat = v;
                             else if (k == "Active") isMasterActive = bool.Parse(v);
                             else if (k == "StayDesktop") widget.StayOnDesktop = bool.Parse(v);
+                            else if (k == "GlowTheme") widget.GlowTheme = v;
+                            else if (k == "GlowRadius") widget.GlowRadius = double.Parse(v);
+                            else if (k == "MotionStyle") widget.MotionStyle = v;
+                            else if (k == "ColonStyle") widget.ColonStyle = v;
+                            else if (k == "ShowDivider") widget.ShowDivider = bool.Parse(v);
+                            else if (k == "ShowGlass") widget.ShowGlassBackplate = bool.Parse(v);
                         }
                     }
                 }
@@ -1499,6 +1916,21 @@ namespace GothicClock
             else if (widget.DateFormat == "dd/MM/yyyy") cmbDateFormat.SelectedIndex = 1;
             else if (widget.DateFormat == "yyyy-MM-dd") cmbDateFormat.SelectedIndex = 2;
             else if (widget.DateFormat == "MMMM d, yyyy") cmbDateFormat.SelectedIndex = 3;
+
+            sliderGlowRadius.Value = widget.GlowRadius;
+            txtGlowRadiusVal.Text = widget.GlowRadius + "px";
+
+            if (widget.MotionStyle == "Spring") cmbMotionStyle.SelectedIndex = 0;
+            else if (widget.MotionStyle == "Smooth") cmbMotionStyle.SelectedIndex = 1;
+            else if (widget.MotionStyle == "Bounce") cmbMotionStyle.SelectedIndex = 2;
+            else if (widget.MotionStyle == "Linear") cmbMotionStyle.SelectedIndex = 3;
+
+            if (widget.ColonStyle == "Breath") cmbColonStyle.SelectedIndex = 0;
+            else if (widget.ColonStyle == "Blink") cmbColonStyle.SelectedIndex = 1;
+            else if (widget.ColonStyle == "Solid") cmbColonStyle.SelectedIndex = 2;
+
+            chkShowDivider.IsChecked = widget.ShowDivider;
+            chkGlassPlate.IsChecked = widget.ShowGlassBackplate;
 
             chkStayDesktop.IsChecked = widget.StayOnDesktop;
 
@@ -1542,6 +1974,12 @@ namespace GothicClock
                     sw.WriteLine("DateFormat=" + widget.DateFormat);
                     sw.WriteLine("Active=" + isMasterActive);
                     sw.WriteLine("StayDesktop=" + widget.StayOnDesktop);
+                    sw.WriteLine("GlowTheme=" + widget.GlowTheme);
+                    sw.WriteLine("GlowRadius=" + widget.GlowRadius);
+                    sw.WriteLine("MotionStyle=" + widget.MotionStyle);
+                    sw.WriteLine("ColonStyle=" + widget.ColonStyle);
+                    sw.WriteLine("ShowDivider=" + widget.ShowDivider);
+                    sw.WriteLine("ShowGlass=" + widget.ShowGlassBackplate);
                 }
             }
             catch { }
