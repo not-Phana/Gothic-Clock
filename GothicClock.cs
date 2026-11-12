@@ -298,6 +298,9 @@ namespace GothicClock
         private System.Windows.Shapes.Rectangle lineLeft;
         private System.Windows.Shapes.Rectangle lineRight;
 
+        private ScaleTransform widgetAnimScale;
+        private TranslateTransform widgetAnimTranslate;
+
         public WidgetWindow()
         {
             this.WindowStyle = WindowStyle.None;
@@ -467,6 +470,14 @@ namespace GothicClock
             mainBorder.LayoutTransform = scaleTransform;
             mainBorder.Child = stack;
 
+            widgetAnimScale = new ScaleTransform(1.0, 1.0);
+            widgetAnimTranslate = new TranslateTransform(0, 0);
+            TransformGroup animTg = new TransformGroup();
+            animTg.Children.Add(widgetAnimScale);
+            animTg.Children.Add(widgetAnimTranslate);
+            mainBorder.RenderTransform = animTg;
+            mainBorder.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
+
             this.Content = mainBorder;
 
             mainBorder.MouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e) {
@@ -475,6 +486,104 @@ namespace GothicClock
                     try { this.DragMove(); } catch { }
                 }
             };
+        }
+
+        public void AnimateHide(Action onCompleted = null)
+        {
+            if (!this.IsVisible)
+            {
+                if (onCompleted != null) onCompleted();
+                return;
+            }
+
+            if (!EnableAnimation)
+            {
+                this.Hide();
+                if (onCompleted != null) onCompleted();
+                return;
+            }
+
+            Storyboard sb = new Storyboard();
+
+            DoubleAnimation animY = new DoubleAnimation(0, 16, new Duration(TimeSpan.FromMilliseconds(220)));
+            animY.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn };
+            Storyboard.SetTarget(animY, widgetAnimTranslate);
+            Storyboard.SetTargetProperty(animY, new PropertyPath(TranslateTransform.YProperty));
+            sb.Children.Add(animY);
+
+            DoubleAnimation animScale = new DoubleAnimation(1.0, 0.90, new Duration(TimeSpan.FromMilliseconds(220)));
+            animScale.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn };
+            Storyboard.SetTarget(animScale, widgetAnimScale);
+            Storyboard.SetTargetProperty(animScale, new PropertyPath(ScaleTransform.ScaleYProperty));
+            sb.Children.Add(animScale);
+
+            DoubleAnimation animOp = new DoubleAnimation(1.0, 0.0, new Duration(TimeSpan.FromMilliseconds(220)));
+            animOp.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn };
+            Storyboard.SetTarget(animOp, mainBorder);
+            Storyboard.SetTargetProperty(animOp, new PropertyPath(UIElement.OpacityProperty));
+            sb.Children.Add(animOp);
+
+            sb.Completed += delegate {
+                this.Hide();
+                widgetAnimTranslate.Y = 0;
+                widgetAnimScale.ScaleX = 1.0;
+                widgetAnimScale.ScaleY = 1.0;
+                mainBorder.Opacity = 1.0;
+                if (onCompleted != null) onCompleted();
+            };
+
+            sb.Begin();
+        }
+
+        public void AnimateShow()
+        {
+            this.Show();
+            this.AttachToDesktop();
+
+            if (!EnableAnimation)
+            {
+                mainBorder.Opacity = 1.0;
+                return;
+            }
+
+            widgetAnimTranslate.Y = -12;
+            widgetAnimScale.ScaleX = 0.94;
+            widgetAnimScale.ScaleY = 0.94;
+            mainBorder.Opacity = 0.0;
+
+            Storyboard sb = new Storyboard();
+
+            DoubleAnimation animY = new DoubleAnimation(-12, 0, new Duration(TimeSpan.FromMilliseconds(260)));
+            animY.EasingFunction = new BackEase { Amplitude = 0.25, EasingMode = EasingMode.EaseOut };
+            Storyboard.SetTarget(animY, widgetAnimTranslate);
+            Storyboard.SetTargetProperty(animY, new PropertyPath(TranslateTransform.YProperty));
+            sb.Children.Add(animY);
+
+            DoubleAnimation animScaleX = new DoubleAnimation(0.94, 1.0, new Duration(TimeSpan.FromMilliseconds(260)));
+            animScaleX.EasingFunction = new BackEase { Amplitude = 0.25, EasingMode = EasingMode.EaseOut };
+            Storyboard.SetTarget(animScaleX, widgetAnimScale);
+            Storyboard.SetTargetProperty(animScaleX, new PropertyPath(ScaleTransform.ScaleXProperty));
+            sb.Children.Add(animScaleX);
+
+            DoubleAnimation animScaleY = new DoubleAnimation(0.94, 1.0, new Duration(TimeSpan.FromMilliseconds(260)));
+            animScaleY.EasingFunction = new BackEase { Amplitude = 0.25, EasingMode = EasingMode.EaseOut };
+            Storyboard.SetTarget(animScaleY, widgetAnimScale);
+            Storyboard.SetTargetProperty(animScaleY, new PropertyPath(ScaleTransform.ScaleYProperty));
+            sb.Children.Add(animScaleY);
+
+            DoubleAnimation animOp = new DoubleAnimation(0.0, 1.0, new Duration(TimeSpan.FromMilliseconds(220)));
+            Storyboard.SetTarget(animOp, mainBorder);
+            Storyboard.SetTargetProperty(animOp, new PropertyPath(UIElement.OpacityProperty));
+            sb.Children.Add(animOp);
+
+            sb.Completed += delegate {
+                widgetAnimTranslate.Y = 0;
+                widgetAnimScale.ScaleX = 1.0;
+                widgetAnimScale.ScaleY = 1.0;
+                mainBorder.Opacity = 1.0;
+            };
+
+            sb.Begin();
         }
 
         public void SetGlowTheme(string theme)
@@ -1051,11 +1160,20 @@ namespace GothicClock
         // System
         private CyberToggle toggleAutoStart;
         private CyberToggle toggleStayDesktop;
+        private CyberToggle toggleCloseAnimation;
 
         // Theme diamond items
         private List<ThemeOptionItem> themeItems = new List<ThemeOptionItem>();
 
         private bool isMasterActive = true;
+        public bool EnableCloseAnimation = true;
+        private bool isClosingAnimating = false;
+
+        private Grid rootGrid;
+        private ScaleTransform rootScale;
+        private System.Windows.Shapes.Rectangle crtBeam;
+        private System.Windows.Shapes.Ellipse crtSpark;
+        private DropShadowEffect winShadow;
 
         public ControlPanelWindow(WidgetWindow widgetWin)
         {
@@ -1080,7 +1198,7 @@ namespace GothicClock
 
             this.Closing += delegate(object s, System.ComponentModel.CancelEventArgs e) {
                 e.Cancel = true;
-                this.Hide();
+                this.AnimateClose();
             };
         }
 
@@ -1285,11 +1403,15 @@ namespace GothicClock
 
         private void BuildUI()
         {
-            Grid rootGrid = new Grid();
+            rootGrid = new Grid();
             rootGrid.Width = 440;
             rootGrid.Height = 780;
             rootGrid.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
             rootGrid.VerticalAlignment = VerticalAlignment.Center;
+
+            rootScale = new ScaleTransform(1.0, 1.0);
+            rootGrid.RenderTransform = rootScale;
+            rootGrid.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
 
             // Cyberpunk Chamfered Outer Frame (22px 45-deg cuts top-left and bottom-right)
             System.Windows.Shapes.Path bgFrame = new System.Windows.Shapes.Path();
@@ -1298,7 +1420,7 @@ namespace GothicClock
             bgFrame.Stroke = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 42, 85));
             bgFrame.StrokeThickness = 1.5;
 
-            DropShadowEffect winShadow = new DropShadowEffect();
+            winShadow = new DropShadowEffect();
             winShadow.Color = System.Windows.Media.Color.FromRgb(255, 42, 85);
             winShadow.BlurRadius = 24;
             winShadow.ShadowDepth = 0;
@@ -1419,7 +1541,7 @@ namespace GothicClock
             btnMin.Click += delegate { this.WindowState = WindowState.Minimized; };
 
             System.Windows.Controls.Button btnClose = CreateTitleButton("close", true);
-            btnClose.Click += delegate { this.Hide(); };
+            btnClose.Click += delegate { this.AnimateClose(); };
 
             spTitleRight.Children.Add(btnMin);
             spTitleRight.Children.Add(btnClose);
@@ -1936,25 +2058,52 @@ namespace GothicClock
             });
             content.Children.Add(toggleStayDesktop.Container);
 
+            toggleCloseAnimation = new CyberToggle("CYBERPUNK DE-REZ SHUTDOWN FX", "Holographic CRT electron beam collapse on window close/exit", true, delegate(bool val) {
+                EnableCloseAnimation = val;
+                SaveConfig();
+            });
+            content.Children.Add(toggleCloseAnimation.Container);
+
+            System.Windows.Controls.Button btnTestDeRez = CreateCyberButton("[ PREVIEW CLOSE ANIMATION ]", 26);
+            btnTestDeRez.Margin = new Thickness(2, 2, 2, 8);
+            btnTestDeRez.Click += delegate {
+                this.AnimateClose(delegate {
+                    DispatcherTimer reopenTimer = new DispatcherTimer();
+                    reopenTimer.Interval = TimeSpan.FromMilliseconds(550);
+                    reopenTimer.Tick += delegate {
+                        reopenTimer.Stop();
+                        this.AnimateOpen();
+                    };
+                    reopenTimer.Start();
+                });
+            };
+            content.Children.Add(btnTestDeRez);
+
             // Bottom action buttons (like Check for updates, Help, Quit Capri)
             UniformGrid gridBottom = new UniformGrid();
-            gridBottom.Columns = 2;
+            gridBottom.Columns = 3;
             gridBottom.Margin = new Thickness(2, 8, 2, 4);
 
-            System.Windows.Controls.Button btnUninstall = CreateCyberButton("[ PURGE / UNINSTALL ]", 30);
-            btnUninstall.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 42, 85));
-            btnUninstall.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 80, 100));
+            System.Windows.Controls.Button btnCloseApp = CreateCyberButton("[ CLOSE ]", 30);
+            btnCloseApp.Click += delegate {
+                this.AnimateClose();
+            };
+
+            System.Windows.Controls.Button btnQuitApp = CreateCyberButton("[ QUIT APP ]", 30);
+            btnQuitApp.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 42, 85));
+            btnQuitApp.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 80, 100));
+            btnQuitApp.Click += delegate {
+                ShutdownApplication();
+            };
+
+            System.Windows.Controls.Button btnUninstall = CreateCyberButton("[ UNINSTALL ]", 30);
             btnUninstall.Click += delegate {
                 PerformUninstall();
             };
 
-            System.Windows.Controls.Button btnCloseApp = CreateCyberButton("[ CLOSE MAINFRAME ]", 30);
-            btnCloseApp.Click += delegate {
-                this.Hide();
-            };
-
-            gridBottom.Children.Add(btnUninstall);
             gridBottom.Children.Add(btnCloseApp);
+            gridBottom.Children.Add(btnQuitApp);
+            gridBottom.Children.Add(btnUninstall);
             content.Children.Add(gridBottom);
 
             // Footer note
@@ -1970,15 +2119,304 @@ namespace GothicClock
             scroll.Content = content;
             mainDock.Children.Add(scroll);
 
+            // Holographic Central CRT Electron Beam & Spark
+            crtBeam = new System.Windows.Shapes.Rectangle();
+            crtBeam.Height = 3.0;
+            crtBeam.Width = 440;
+            crtBeam.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            crtBeam.VerticalAlignment = VerticalAlignment.Center;
+            crtBeam.Visibility = Visibility.Collapsed;
+            crtBeam.IsHitTestVisible = false;
+
+            LinearGradientBrush beamBrush = new LinearGradientBrush();
+            beamBrush.StartPoint = new System.Windows.Point(0, 0.5);
+            beamBrush.EndPoint = new System.Windows.Point(1, 0.5);
+            beamBrush.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(0, 0, 240, 255), 0.0));
+            beamBrush.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(255, 0, 240, 255), 0.2));
+            beamBrush.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 255, 255), 0.5));
+            beamBrush.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(255, 255, 42, 85), 0.8));
+            beamBrush.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromArgb(0, 255, 42, 85), 1.0));
+            crtBeam.Fill = beamBrush;
+
+            DropShadowEffect beamGlow = new DropShadowEffect();
+            beamGlow.Color = System.Windows.Media.Color.FromRgb(0, 240, 255);
+            beamGlow.BlurRadius = 20;
+            beamGlow.ShadowDepth = 0;
+            beamGlow.Opacity = 1.0;
+            crtBeam.Effect = beamGlow;
+            rootGrid.Children.Add(crtBeam);
+
+            crtSpark = new System.Windows.Shapes.Ellipse();
+            crtSpark.Width = 10;
+            crtSpark.Height = 10;
+            crtSpark.Fill = new SolidColorBrush(Colors.White);
+            crtSpark.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+            crtSpark.VerticalAlignment = VerticalAlignment.Center;
+            crtSpark.Visibility = Visibility.Collapsed;
+            crtSpark.IsHitTestVisible = false;
+
+            DropShadowEffect sparkGlow = new DropShadowEffect();
+            sparkGlow.Color = System.Windows.Media.Color.FromRgb(0, 240, 255);
+            sparkGlow.BlurRadius = 22;
+            sparkGlow.ShadowDepth = 0;
+            sparkGlow.Opacity = 1.0;
+            crtSpark.Effect = sparkGlow;
+            rootGrid.Children.Add(crtSpark);
+
             this.Content = rootGrid;
         }
 
-        private void ApplyMasterActive()
+        public void AnimateClose(Action onCompleted = null)
+        {
+            if (isClosingAnimating) return;
+
+            if (!EnableCloseAnimation)
+            {
+                this.Hide();
+                if (onCompleted != null) onCompleted();
+                return;
+            }
+
+            isClosingAnimating = true;
+
+            if (crtBeam != null)
+            {
+                crtBeam.Opacity = 1.0;
+                crtBeam.Visibility = Visibility.Visible;
+            }
+            if (crtSpark != null)
+            {
+                crtSpark.Opacity = 0.0;
+                crtSpark.Visibility = Visibility.Visible;
+            }
+
+            Storyboard sb = new Storyboard();
+
+            // 1. Initial Voltage Flicker & Drop
+            DoubleAnimationUsingKeyFrames animFlicker = new DoubleAnimationUsingKeyFrames();
+            animFlicker.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(0))));
+            animFlicker.KeyFrames.Add(new LinearDoubleKeyFrame(0.72, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(35))));
+            animFlicker.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(70))));
+            animFlicker.KeyFrames.Add(new SplineDoubleKeyFrame(0.95, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(140))));
+            animFlicker.KeyFrames.Add(new SplineDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(270))));
+            Storyboard.SetTarget(animFlicker, rootGrid);
+            Storyboard.SetTargetProperty(animFlicker, new PropertyPath(UIElement.OpacityProperty));
+            sb.Children.Add(animFlicker);
+
+            // 2. Vertical Collapse (ScaleY: 1.0 -> 0.003 in 150ms)
+            DoubleAnimation animScaleY = new DoubleAnimation();
+            animScaleY.From = 1.0;
+            animScaleY.To = 0.003;
+            animScaleY.Duration = new Duration(TimeSpan.FromMilliseconds(150));
+            animScaleY.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn };
+            Storyboard.SetTarget(animScaleY, rootScale);
+            Storyboard.SetTargetProperty(animScaleY, new PropertyPath(ScaleTransform.ScaleYProperty));
+            sb.Children.Add(animScaleY);
+
+            // 3. Horizontal Squeeze (ScaleX: slight bloom to 1.04 at 140ms, then collapse to 0.0 at 270ms)
+            DoubleAnimationUsingKeyFrames animScaleX = new DoubleAnimationUsingKeyFrames();
+            animScaleX.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(0))));
+            animScaleX.KeyFrames.Add(new SplineDoubleKeyFrame(1.04, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(140))));
+            animScaleX.KeyFrames.Add(new SplineDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(270))));
+            Storyboard.SetTarget(animScaleX, rootScale);
+            Storyboard.SetTargetProperty(animScaleX, new PropertyPath(ScaleTransform.ScaleXProperty));
+            sb.Children.Add(animScaleX);
+
+            // 4. Beam Glow Surge & Fade
+            if (crtBeam != null)
+            {
+                DoubleAnimationUsingKeyFrames animBeamOp = new DoubleAnimationUsingKeyFrames();
+                animBeamOp.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(0))));
+                animBeamOp.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(60))));
+                animBeamOp.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(160))));
+                animBeamOp.KeyFrames.Add(new SplineDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(270))));
+                Storyboard.SetTarget(animBeamOp, crtBeam);
+                Storyboard.SetTargetProperty(animBeamOp, new PropertyPath(UIElement.OpacityProperty));
+                sb.Children.Add(animBeamOp);
+            }
+
+            // 5. Central Spark Flare when collapsing into center
+            if (crtSpark != null)
+            {
+                DoubleAnimationUsingKeyFrames animSpark = new DoubleAnimationUsingKeyFrames();
+                animSpark.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(0))));
+                animSpark.KeyFrames.Add(new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(140))));
+                animSpark.KeyFrames.Add(new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(200))));
+                animSpark.KeyFrames.Add(new SplineDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(270))));
+                Storyboard.SetTarget(animSpark, crtSpark);
+                Storyboard.SetTargetProperty(animSpark, new PropertyPath(UIElement.OpacityProperty));
+                sb.Children.Add(animSpark);
+            }
+
+            // 6. Window Neon Shadow Flash
+            if (winShadow != null)
+            {
+                DoubleAnimationUsingKeyFrames animShadow = new DoubleAnimationUsingKeyFrames();
+                animShadow.KeyFrames.Add(new LinearDoubleKeyFrame(24, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(0))));
+                animShadow.KeyFrames.Add(new SplineDoubleKeyFrame(55, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(140))));
+                animShadow.KeyFrames.Add(new SplineDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(270))));
+                Storyboard.SetTarget(animShadow, winShadow);
+                Storyboard.SetTargetProperty(animShadow, new PropertyPath(DropShadowEffect.BlurRadiusProperty));
+                sb.Children.Add(animShadow);
+            }
+
+            sb.Completed += delegate {
+                this.Hide();
+                rootScale.ScaleX = 1.0;
+                rootScale.ScaleY = 1.0;
+                rootGrid.Opacity = 1.0;
+                if (winShadow != null) winShadow.BlurRadius = 24;
+                if (crtBeam != null) { crtBeam.Visibility = Visibility.Collapsed; crtBeam.Opacity = 1.0; }
+                if (crtSpark != null) { crtSpark.Visibility = Visibility.Collapsed; crtSpark.Opacity = 0.0; }
+                isClosingAnimating = false;
+                if (onCompleted != null) onCompleted();
+            };
+
+            sb.Begin();
+        }
+
+        public void AnimateOpen()
+        {
+            if (isClosingAnimating) return;
+
+            this.Show();
+            this.WindowState = WindowState.Normal;
+            this.Activate();
+
+            if (!EnableCloseAnimation)
+            {
+                rootScale.ScaleX = 1.0;
+                rootScale.ScaleY = 1.0;
+                rootGrid.Opacity = 1.0;
+                return;
+            }
+
+            rootScale.ScaleX = 0.0;
+            rootScale.ScaleY = 0.004;
+            rootGrid.Opacity = 0.0;
+
+            if (crtBeam != null)
+            {
+                crtBeam.Opacity = 1.0;
+                crtBeam.Visibility = Visibility.Visible;
+            }
+            if (crtSpark != null)
+            {
+                crtSpark.Opacity = 1.0;
+                crtSpark.Visibility = Visibility.Visible;
+            }
+
+            Storyboard sb = new Storyboard();
+
+            // 1. Horizontal beam expansion (0 to 130ms: ScaleX 0.0 -> 1.03)
+            DoubleAnimation animScaleX = new DoubleAnimation();
+            animScaleX.From = 0.0;
+            animScaleX.To = 1.03;
+            animScaleX.Duration = new Duration(TimeSpan.FromMilliseconds(130));
+            animScaleX.EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut };
+            Storyboard.SetTarget(animScaleX, rootScale);
+            Storyboard.SetTargetProperty(animScaleX, new PropertyPath(ScaleTransform.ScaleXProperty));
+            sb.Children.Add(animScaleX);
+
+            // Opacity fade in
+            DoubleAnimation animOp = new DoubleAnimation(0.0, 1.0, new Duration(TimeSpan.FromMilliseconds(100)));
+            Storyboard.SetTarget(animOp, rootGrid);
+            Storyboard.SetTargetProperty(animOp, new PropertyPath(UIElement.OpacityProperty));
+            sb.Children.Add(animOp);
+
+            // 2. Vertical unfold with micro-bounce (110ms to 290ms: ScaleY 0.004 -> 1.0)
+            DoubleAnimation animScaleY = new DoubleAnimation();
+            animScaleY.From = 0.004;
+            animScaleY.To = 1.0;
+            animScaleY.BeginTime = TimeSpan.FromMilliseconds(110);
+            animScaleY.Duration = new Duration(TimeSpan.FromMilliseconds(180));
+            animScaleY.EasingFunction = new BackEase { Amplitude = 0.22, EasingMode = EasingMode.EaseOut };
+            Storyboard.SetTarget(animScaleY, rootScale);
+            Storyboard.SetTargetProperty(animScaleY, new PropertyPath(ScaleTransform.ScaleYProperty));
+            sb.Children.Add(animScaleY);
+
+            // Beam fade out as content reveals
+            if (crtBeam != null)
+            {
+                DoubleAnimation animBeamFade = new DoubleAnimation(1.0, 0.0, new Duration(TimeSpan.FromMilliseconds(150)));
+                animBeamFade.BeginTime = TimeSpan.FromMilliseconds(130);
+                Storyboard.SetTarget(animBeamFade, crtBeam);
+                Storyboard.SetTargetProperty(animBeamFade, new PropertyPath(UIElement.OpacityProperty));
+                sb.Children.Add(animBeamFade);
+            }
+            if (crtSpark != null)
+            {
+                DoubleAnimation animSparkFade = new DoubleAnimation(1.0, 0.0, new Duration(TimeSpan.FromMilliseconds(110)));
+                Storyboard.SetTarget(animSparkFade, crtSpark);
+                Storyboard.SetTargetProperty(animSparkFade, new PropertyPath(UIElement.OpacityProperty));
+                sb.Children.Add(animSparkFade);
+            }
+
+            sb.Completed += delegate {
+                rootScale.ScaleX = 1.0;
+                rootScale.ScaleY = 1.0;
+                rootGrid.Opacity = 1.0;
+                if (crtBeam != null) { crtBeam.Visibility = Visibility.Collapsed; crtBeam.Opacity = 1.0; }
+                if (crtSpark != null) { crtSpark.Visibility = Visibility.Collapsed; crtSpark.Opacity = 0.0; }
+            };
+
+            sb.Begin();
+        }
+
+        public void ShutdownApplication()
+        {
+            if (this.IsVisible && EnableCloseAnimation)
+            {
+                this.AnimateClose(delegate {
+                    if (widget != null && widget.IsVisible)
+                    {
+                        widget.AnimateHide(delegate {
+                            CleanupAndShutdown();
+                        });
+                    }
+                    else
+                    {
+                        CleanupAndShutdown();
+                    }
+                });
+            }
+            else if (widget != null && widget.IsVisible && EnableCloseAnimation)
+            {
+                widget.AnimateHide(delegate {
+                    CleanupAndShutdown();
+                });
+            }
+            else
+            {
+                CleanupAndShutdown();
+            }
+        }
+
+        private void CleanupAndShutdown()
+        {
+            try {
+                if (trayIcon != null)
+                {
+                    trayIcon.Visible = false;
+                    trayIcon.Dispose();
+                }
+            } catch { }
+            System.Windows.Application.Current.Shutdown();
+        }
+
+        private void ApplyMasterActive(bool isInitial = false)
         {
             if (isMasterActive)
             {
-                widget.Show();
-                widget.AttachToDesktop();
+                if (isInitial)
+                {
+                    widget.Show();
+                    widget.AttachToDesktop();
+                }
+                else
+                {
+                    widget.AnimateShow();
+                }
                 if (btnHeaderStatus != null)
                 {
                     btnHeaderStatus.Content = "Widget: ON";
@@ -1989,7 +2427,14 @@ namespace GothicClock
             }
             else
             {
-                widget.Hide();
+                if (isInitial)
+                {
+                    widget.Hide();
+                }
+                else
+                {
+                    widget.AnimateHide();
+                }
                 if (btnHeaderStatus != null)
                 {
                     btnHeaderStatus.Content = "Widget: OFF";
@@ -2206,22 +2651,23 @@ namespace GothicClock
 
             trayIcon.Visible = true;
             trayIcon.DoubleClick += delegate {
-                this.Show();
-                this.WindowState = WindowState.Normal;
-                this.Activate();
+                this.AnimateOpen();
             };
 
             System.Windows.Forms.ContextMenu menu = new System.Windows.Forms.ContextMenu();
             menu.MenuItems.Add(new System.Windows.Forms.MenuItem("Open Mainframe", delegate {
-                this.Show();
-                this.WindowState = WindowState.Normal;
-                this.Activate();
+                this.AnimateOpen();
+            }));
+            menu.MenuItems.Add(new System.Windows.Forms.MenuItem("Toggle Widget (ON/OFF)", delegate {
+                isMasterActive = !isMasterActive;
+                ApplyMasterActive(false);
+                SaveConfig();
             }));
             menu.MenuItems.Add("-");
             menu.MenuItems.Add(new System.Windows.Forms.MenuItem("Exit Completely", delegate {
-                trayIcon.Visible = false;
-                trayIcon.Dispose();
-                System.Windows.Application.Current.Shutdown();
+                this.Dispatcher.BeginInvoke(new Action(delegate {
+                    ShutdownApplication();
+                }));
             }));
 
             trayIcon.ContextMenu = menu;
@@ -2304,6 +2750,7 @@ namespace GothicClock
                             else if (k == "ColonStyle") widget.ColonStyle = v;
                             else if (k == "ShowDivider") widget.ShowDivider = bool.Parse(v);
                             else if (k == "ShowGlass") widget.ShowGlassBackplate = bool.Parse(v);
+                            else if (k == "EnableCloseAnim") EnableCloseAnimation = bool.Parse(v);
                         }
                     }
                 }
@@ -2354,6 +2801,7 @@ namespace GothicClock
 
             toggleDivider.IsChecked = widget.ShowDivider;
             toggleGlass.IsChecked = widget.ShowGlassBackplate;
+            if (toggleCloseAnimation != null) toggleCloseAnimation.IsChecked = EnableCloseAnimation;
 
             toggleStayDesktop.IsChecked = widget.StayOnDesktop;
 
@@ -2361,7 +2809,7 @@ namespace GothicClock
             SelectTheme(widget.GlowTheme);
             SnapPosition(defaultLeft, defaultTop);
 
-            ApplyMasterActive();
+            ApplyMasterActive(true);
         }
 
         private void SaveConfig()
@@ -2394,6 +2842,7 @@ namespace GothicClock
                     sw.WriteLine("ColonStyle=" + widget.ColonStyle);
                     sw.WriteLine("ShowDivider=" + widget.ShowDivider);
                     sw.WriteLine("ShowGlass=" + widget.ShowGlassBackplate);
+                    sw.WriteLine("EnableCloseAnim=" + EnableCloseAnimation);
                 }
             }
             catch { }
@@ -2515,9 +2964,7 @@ namespace GothicClock
                     {
                         showEventHandle.WaitOne();
                         app.Dispatcher.BeginInvoke(new Action(delegate {
-                            controlPanel.Show();
-                            controlPanel.WindowState = WindowState.Normal;
-                            controlPanel.Activate();
+                            controlPanel.AnimateOpen();
                         }));
                     }
                 }));
@@ -2526,7 +2973,7 @@ namespace GothicClock
 
                 if (!isSilent)
                 {
-                    controlPanel.Show();
+                    controlPanel.AnimateOpen();
                 }
 
                 app.Run();
