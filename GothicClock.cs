@@ -219,6 +219,7 @@ namespace GothicClock
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
         private static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
         private static readonly IntPtr HWND_TOP = new IntPtr(0);
+        private static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
         private const int SW_SHOWNOACTIVATE = 4;
 
         [StructLayout(LayoutKind.Sequential)]
@@ -295,8 +296,8 @@ namespace GothicClock
 
         public double MasterScale = 0.85;
         public bool IsMoveMode = false;
-        public bool StayOnDesktop = false;
-        public bool IsAlwaysOnTop = true;
+        public bool StayOnDesktop = true;
+        public bool IsAlwaysOnTop = false;
         public bool ShowCyberHud = true;
         public bool ShowTelemetryBar = true;
 
@@ -940,15 +941,7 @@ namespace GothicClock
                 }
                 else
                 {
-                    int targetStyle = (exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-                    if (IsAlwaysOnTop)
-                    {
-                        targetStyle |= WS_EX_TRANSPARENT;
-                    }
-                    else
-                    {
-                        targetStyle &= ~WS_EX_TRANSPARENT;
-                    }
+                    int targetStyle = (exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT);
                     SetWindowLong(hwnd, GWL_EXSTYLE, targetStyle);
                     SetGlassPlate(ShowGlassBackplate);
                     this.Cursor = System.Windows.Input.Cursors.Arrow;
@@ -962,15 +955,27 @@ namespace GothicClock
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             if (hwnd == IntPtr.Zero) return;
 
-            if (IsMoveMode || IsAlwaysOnTop)
+            if (IsMoveMode)
             {
                 this.Topmost = true;
+                return;
+            }
+
+            if (IsAlwaysOnTop)
+            {
+                this.Topmost = true;
+                try { SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, IntPtr.Zero); } catch { }
                 SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
             }
             else
             {
                 this.Topmost = false;
-                // Place window in normal desktop Z-order (above Progman, WorkerW & live wallpaper, but below active apps)
+                IntPtr progman = FindWindow("Progman", null);
+                if (progman != IntPtr.Zero)
+                {
+                    try { SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, progman); } catch { }
+                }
+                // Place window directly on the desktop layer: above Progman and live wallpaper, but below active apps
                 SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
             }
         }
@@ -1044,7 +1049,7 @@ namespace GothicClock
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             int targetStyle = exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
-            if (IsAlwaysOnTop && !IsMoveMode)
+            if (!IsMoveMode)
             {
                 targetStyle |= WS_EX_TRANSPARENT;
             }
@@ -1095,8 +1100,13 @@ namespace GothicClock
                 }
                 else
                 {
-                    pos.hwndInsertAfter = HWND_NOTOPMOST;
-                    pos.flags &= ~0x0004u;
+                    // DESKTOP SCREEN LAYER:
+                    // Keep SWP_NOZORDER so active applications sit in FRONT of the widget on the desktop.
+                    // If Windows tries to push the widget behind Progman/WorkerW (HWND_BOTTOM), prevent it:
+                    if (pos.hwndInsertAfter == HWND_BOTTOM)
+                    {
+                        pos.hwndInsertAfter = HWND_NOTOPMOST;
+                    }
                 }
 
                 Marshal.StructureToPtr(pos, lParam, true);
