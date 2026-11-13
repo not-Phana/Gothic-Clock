@@ -215,7 +215,10 @@ namespace GothicClock
         private const int WS_EX_TOOLWINDOW = 0x00000080;
         private const int WS_EX_NOACTIVATE = 0x08000000;
 
-        private static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        private static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
+        private static readonly IntPtr HWND_TOP = new IntPtr(0);
+        private const int SW_SHOWNOACTIVATE = 4;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct WINDOWPOS
@@ -243,6 +246,15 @@ namespace GothicClock
 
         [DllImport("user32.dll")]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         // Rolling elements for Time line
         private StackPanel timePanel;
@@ -283,6 +295,7 @@ namespace GothicClock
         public double MasterScale = 0.85;
         public bool IsMoveMode = false;
         public bool StayOnDesktop = true;
+        public bool IsAlwaysOnTop = false;
 
         // Bleach Gothic Visual FX & Spiritual Reiatsu Aura
         public string GlowTheme = "Getsuga";
@@ -311,6 +324,13 @@ namespace GothicClock
             this.SizeToContent = SizeToContent.WidthAndHeight;
             this.ResizeMode = ResizeMode.NoResize;
             this.Title = "Gothic Clock Widget";
+
+            this.StateChanged += delegate {
+                if (this.WindowState != WindowState.Normal)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+            };
 
             BuildUI();
 
@@ -768,25 +788,31 @@ namespace GothicClock
             {
                 SetGlassPlate(ShowGlassBackplate);
                 this.Cursor = System.Windows.Input.Cursors.Arrow;
-                this.Topmost = false;
                 AttachToDesktop();
             }
         }
 
         public void AttachToDesktop()
         {
-            if (StayOnDesktop && !IsMoveMode)
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero) return;
+
+            if (IsMoveMode)
             {
-                IntPtr hwnd = new WindowInteropHelper(this).Handle;
-                if (hwnd != IntPtr.Zero)
-                {
-                    IntPtr progman = FindWindow("Progman", null);
-                    if (progman != IntPtr.Zero)
-                    {
-                        try { SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, progman); } catch { }
-                    }
-                    SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-                }
+                this.Topmost = true;
+                return;
+            }
+
+            if (IsAlwaysOnTop)
+            {
+                this.Topmost = true;
+                SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+            }
+            else
+            {
+                this.Topmost = false;
+                // Place window in normal desktop Z-order (above Progman, WorkerW & live wallpaper, but below active apps)
+                SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
             }
         }
 
@@ -838,6 +864,18 @@ namespace GothicClock
                 string dateText = now.ToString(DateFormat);
                 BoxDate.Update(dateText, EnableAnimation, AnimationDurationMs);
             }
+
+            // Immune to Win+D minimization/hide: auto-restore if ever minimized or hidden
+            if (StayOnDesktop || IsAlwaysOnTop)
+            {
+                try {
+                    IntPtr h = new WindowInteropHelper(this).Handle;
+                    if (h != IntPtr.Zero && (IsIconic(h) || !IsWindowVisible(h)))
+                    {
+                        ShowWindow(h, SW_SHOWNOACTIVATE);
+                    }
+                } catch { }
+            }
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -865,7 +903,8 @@ namespace GothicClock
                 return new IntPtr(MA_NOACTIVATE);
             }
 
-            if (msg == WM_SHOWWINDOW && (int)wParam == 0 && StayOnDesktop)
+            // Block Windows from hiding the widget (e.g. during Win+D / Show Desktop)
+            if (msg == WM_SHOWWINDOW && (int)wParam == 0)
             {
                 handled = true;
                 return IntPtr.Zero;
@@ -875,26 +914,27 @@ namespace GothicClock
             {
                 WINDOWPOS pos = (WINDOWPOS)Marshal.PtrToStructure(lParam, typeof(WINDOWPOS));
 
-                if (pos.x == -32000 || pos.y == -32000 || (pos.flags & SWP_HIDEWINDOW) != 0)
+                // Block minimization offscreen (-32000) or SWP_HIDEWINDOW (0x0080)
+                if (pos.x <= -10000 || pos.y <= -10000 || (pos.flags & SWP_HIDEWINDOW) != 0)
                 {
+                    pos.x = (int)this.Left;
+                    pos.y = (int)this.Top;
                     pos.flags |= (SWP_NOMOVE | SWP_NOSIZE);
                     pos.flags &= ~SWP_HIDEWINDOW;
                     pos.flags |= SWP_SHOWWINDOW;
                 }
 
-                if (StayOnDesktop && !IsMoveMode)
-                {
-                    pos.hwndInsertAfter = HWND_BOTTOM;
-                    pos.flags &= ~0x0004u;
-                }
+                // Never force HWND_BOTTOM! Preserve Z-order so it never gets buried behind the desktop/wallpaper
+                pos.flags |= 0x0004u; // SWP_NOZORDER
 
                 Marshal.StructureToPtr(pos, lParam, true);
                 handled = true;
+                return IntPtr.Zero;
             }
             else if (msg == WM_SYSCOMMAND)
             {
                 int sc = (wParam.ToInt32() & 0xFFF0);
-                if (sc == SC_MINIMIZE && StayOnDesktop)
+                if (sc == SC_MINIMIZE)
                 {
                     handled = true;
                     return IntPtr.Zero;
@@ -1160,6 +1200,7 @@ namespace GothicClock
         // System
         private CyberToggle toggleAutoStart;
         private CyberToggle toggleStayDesktop;
+        private CyberToggle toggleAlwaysOnTop;
         private CyberToggle toggleCloseAnimation;
 
         // Theme diamond items
@@ -2051,12 +2092,29 @@ namespace GothicClock
             });
             content.Children.Add(toggleAutoStart.Container);
 
-            toggleStayDesktop = new CyberToggle("STAY AT MAIN DESKTOP LAYER", "Pins behind open apps, immune to Win+D show-desktop", true, delegate(bool val) {
+            toggleStayDesktop = new CyberToggle("STAY AT MAIN DESKTOP LAYER", "Pins above wallpaper & icons, survives Win+D show-desktop", widget.StayOnDesktop, delegate(bool val) {
                 widget.StayOnDesktop = val;
+                if (val && widget.IsAlwaysOnTop)
+                {
+                    widget.IsAlwaysOnTop = false;
+                    if (toggleAlwaysOnTop != null) toggleAlwaysOnTop.IsChecked = false;
+                }
                 widget.AttachToDesktop();
                 SaveConfig();
             });
             content.Children.Add(toggleStayDesktop.Container);
+
+            toggleAlwaysOnTop = new CyberToggle("ALWAYS ON TOP (CYBER HUD OVERLAY)", "Floats above all full-screen windows and apps", widget.IsAlwaysOnTop, delegate(bool val) {
+                widget.IsAlwaysOnTop = val;
+                if (val && widget.StayOnDesktop)
+                {
+                    widget.StayOnDesktop = false;
+                    if (toggleStayDesktop != null) toggleStayDesktop.IsChecked = false;
+                }
+                widget.AttachToDesktop();
+                SaveConfig();
+            });
+            content.Children.Add(toggleAlwaysOnTop.Container);
 
             toggleCloseAnimation = new CyberToggle("CYBERPUNK DE-REZ SHUTDOWN FX", "Holographic CRT electron beam collapse on window close/exit", true, delegate(bool val) {
                 EnableCloseAnimation = val;
@@ -2744,6 +2802,7 @@ namespace GothicClock
                             else if (k == "DateFormat") widget.DateFormat = v;
                             else if (k == "Active") isMasterActive = bool.Parse(v);
                             else if (k == "StayDesktop") widget.StayOnDesktop = bool.Parse(v);
+                            else if (k == "AlwaysOnTop") widget.IsAlwaysOnTop = bool.Parse(v);
                             else if (k == "GlowTheme") widget.GlowTheme = v;
                             else if (k == "GlowRadius") widget.GlowRadius = double.Parse(v);
                             else if (k == "MotionStyle") widget.MotionStyle = v;
@@ -2804,6 +2863,7 @@ namespace GothicClock
             if (toggleCloseAnimation != null) toggleCloseAnimation.IsChecked = EnableCloseAnimation;
 
             toggleStayDesktop.IsChecked = widget.StayOnDesktop;
+            if (toggleAlwaysOnTop != null) toggleAlwaysOnTop.IsChecked = widget.IsAlwaysOnTop;
 
             widget.RefreshAppearance();
             SelectTheme(widget.GlowTheme);
@@ -2836,6 +2896,7 @@ namespace GothicClock
                     sw.WriteLine("DateFormat=" + widget.DateFormat);
                     sw.WriteLine("Active=" + isMasterActive);
                     sw.WriteLine("StayDesktop=" + widget.StayOnDesktop);
+                    sw.WriteLine("AlwaysOnTop=" + widget.IsAlwaysOnTop);
                     sw.WriteLine("GlowTheme=" + widget.GlowTheme);
                     sw.WriteLine("GlowRadius=" + widget.GlowRadius);
                     sw.WriteLine("MotionStyle=" + widget.MotionStyle);
