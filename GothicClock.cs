@@ -214,6 +214,7 @@ namespace GothicClock
         private const int GWLP_HWNDPARENT = -8;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
         private const int WS_EX_NOACTIVATE = 0x08000000;
+        private const int WS_EX_TRANSPARENT = 0x00000020;
 
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
         private static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
@@ -294,17 +295,26 @@ namespace GothicClock
 
         public double MasterScale = 0.85;
         public bool IsMoveMode = false;
-        public bool StayOnDesktop = true;
-        public bool IsAlwaysOnTop = false;
+        public bool StayOnDesktop = false;
+        public bool IsAlwaysOnTop = true;
+        public bool ShowCyberHud = true;
+        public bool ShowTelemetryBar = true;
 
-        // Bleach Gothic Visual FX & Spiritual Reiatsu Aura
-        public string GlowTheme = "Getsuga";
+        // Bleach & Cyberpunk Gothic Visual FX & Spiritual Reiatsu Aura
+        public string GlowTheme = "NightCity";
         public double GlowRadius = 18;
         public double GlowOpacity = 0.90;
         public string MotionStyle = "Spring";
         public string ColonStyle = "Breath";
         public bool ShowDivider = true;
         public bool ShowGlassBackplate = false;
+
+        private Viewbox reticleLeftViewbox;
+        private Viewbox reticleRightViewbox;
+        private System.Windows.Shapes.Path reticleLeftPath;
+        private System.Windows.Shapes.Path reticleRightPath;
+        private Border telemetryBorder;
+        private TextBlock txtTelemetryText;
 
         private Grid dividerGrid;
         private System.Windows.Shapes.Polygon diamondCenter;
@@ -456,12 +466,53 @@ namespace GothicClock
             BoxAmPm = new RollingBox(gothicFont, TimeFontSize, textBrush, shadow);
             BoxAmPm.Container.Margin = new Thickness(6, 0, 0, 0);
 
+            // =================================================================
+            // CYBERPUNK HUD RETICLE FRAMES (VECTOR TARGETING BRACKETS)
+            // =================================================================
+            string leftReticleData = "M 22,0 L 8,0 L 0,8 L 0,56 L 8,64 L 22,64 " +
+                                     "M 0,22 L 6,22 M 0,32 L 9,32 M 0,42 L 6,42 " +
+                                     "M 5,14 L 8,14 M 5,50 L 8,50 " +
+                                     "M 14,0 L 14,4 M 14,64 L 14,60";
+
+            string rightReticleData = "M 0,0 L 14,0 L 22,8 L 22,56 L 14,64 L 0,64 " +
+                                      "M 22,22 L 16,22 M 22,32 L 13,32 M 22,42 L 16,42 " +
+                                      "M 17,14 L 14,14 M 17,50 L 14,50 " +
+                                      "M 8,0 L 8,4 M 8,64 L 8,60";
+
+            reticleLeftViewbox = new Viewbox();
+            reticleLeftViewbox.Stretch = Stretch.Uniform;
+            reticleLeftViewbox.Width = TimeFontSize * 0.40;
+            reticleLeftViewbox.Height = TimeFontSize * 1.05;
+            reticleLeftViewbox.VerticalAlignment = VerticalAlignment.Center;
+            reticleLeftViewbox.Margin = new Thickness(0, 0, 6, 0);
+
+            reticleLeftPath = new System.Windows.Shapes.Path();
+            reticleLeftPath.Data = Geometry.Parse(leftReticleData);
+            reticleLeftPath.StrokeThickness = 2.0;
+            reticleLeftPath.StrokeLineJoin = PenLineJoin.Miter;
+            reticleLeftViewbox.Child = reticleLeftPath;
+
+            reticleRightViewbox = new Viewbox();
+            reticleRightViewbox.Stretch = Stretch.Uniform;
+            reticleRightViewbox.Width = TimeFontSize * 0.40;
+            reticleRightViewbox.Height = TimeFontSize * 1.05;
+            reticleRightViewbox.VerticalAlignment = VerticalAlignment.Center;
+            reticleRightViewbox.Margin = new Thickness(6, 0, 0, 0);
+
+            reticleRightPath = new System.Windows.Shapes.Path();
+            reticleRightPath.Data = Geometry.Parse(rightReticleData);
+            reticleRightPath.StrokeThickness = 2.0;
+            reticleRightPath.StrokeLineJoin = PenLineJoin.Miter;
+            reticleRightViewbox.Child = reticleRightPath;
+
+            timePanel.Children.Add(reticleLeftViewbox);
             timePanel.Children.Add(BoxHour.Container);
             timePanel.Children.Add(txtColon1);
             timePanel.Children.Add(BoxMin.Container);
             timePanel.Children.Add(txtColon2);
             timePanel.Children.Add(BoxSec.Container);
             timePanel.Children.Add(BoxAmPm.Container);
+            timePanel.Children.Add(reticleRightViewbox);
 
             // Ornate Divider
             BuildDivider();
@@ -474,10 +525,53 @@ namespace GothicClock
 
             BoxDate = new RollingBox(gothicFont, DateFontSize, textBrush, shadow);
 
+            // =================================================================
+            // CYBERPUNK TELEMETRY HUD BAR (STATUS CAPSULE)
+            // =================================================================
+            telemetryBorder = new Border();
+            telemetryBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(170, 8, 10, 16));
+            telemetryBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(90, 0, 240, 255));
+            telemetryBorder.BorderThickness = new Thickness(1);
+            telemetryBorder.CornerRadius = new CornerRadius(3);
+            telemetryBorder.Padding = new Thickness(10, 2, 10, 2);
+            telemetryBorder.Margin = new Thickness(0, 6, 0, 0);
+            telemetryBorder.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
+
+            StackPanel spTelem = new StackPanel();
+            spTelem.Orientation = System.Windows.Controls.Orientation.Horizontal;
+            spTelem.VerticalAlignment = VerticalAlignment.Center;
+
+            System.Windows.Shapes.Ellipse dotPulse = new System.Windows.Shapes.Ellipse();
+            dotPulse.Width = 5;
+            dotPulse.Height = 5;
+            dotPulse.Fill = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 255, 180));
+            dotPulse.Margin = new Thickness(0, 0, 6, 0);
+            dotPulse.VerticalAlignment = VerticalAlignment.Center;
+
+            DropShadowEffect dotGlow = new DropShadowEffect();
+            dotGlow.Color = System.Windows.Media.Color.FromRgb(0, 255, 180);
+            dotGlow.BlurRadius = 6;
+            dotGlow.ShadowDepth = 0;
+            dotGlow.Opacity = 1.0;
+            dotPulse.Effect = dotGlow;
+
+            txtTelemetryText = new TextBlock();
+            txtTelemetryText.Text = "SYS.2077 // NIGHT_CITY // SYNC_OK";
+            txtTelemetryText.FontFamily = new System.Windows.Media.FontFamily("Consolas, Courier New, monospace");
+            txtTelemetryText.FontSize = 9.5;
+            txtTelemetryText.FontWeight = FontWeights.Bold;
+            txtTelemetryText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+            txtTelemetryText.VerticalAlignment = VerticalAlignment.Center;
+
+            spTelem.Children.Add(dotPulse);
+            spTelem.Children.Add(txtTelemetryText);
+            telemetryBorder.Child = spTelem;
+
             stack.Children.Add(timePanel);
             stack.Children.Add(dividerGrid);
             stack.Children.Add(BoxDay.Container);
             stack.Children.Add(BoxDate.Container);
+            stack.Children.Add(telemetryBorder);
 
             mainBorder = new Border();
             mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(1, 255, 255, 255));
@@ -612,7 +706,19 @@ namespace GothicClock
             SolidColorBrush textBrush;
             System.Windows.Media.Color glowColor;
 
-            if (theme == "Getsuga" || theme == "GetsugaTensho" || theme == "Crimson")
+            if (theme == "NightCity" || theme == "NeonCyan")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 255, 255)); // Crisp Cyber White
+                glowColor = System.Windows.Media.Color.FromRgb(0, 240, 255); // Neon Cyan HUD
+                if (GlowRadius < 8) GlowRadius = 18;
+            }
+            else if (theme == "Cyberpunk" || theme == "Amber2077")
+            {
+                textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 250, 220)); // Pale Cyber Gold
+                glowColor = System.Windows.Media.Color.FromRgb(245, 158, 11); // Radiant Amber
+                if (GlowRadius < 8) GlowRadius = 18;
+            }
+            else if (theme == "Getsuga" || theme == "GetsugaTensho" || theme == "Crimson")
             {
                 textBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255)); // Pure Soul Bone White
                 glowColor = System.Windows.Media.Color.FromRgb(225, 29, 72); // Crimson Blood Reiatsu
@@ -688,6 +794,32 @@ namespace GothicClock
             txtColon2.Effect = cEff2;
 
             UpdateDividerColors(textBrush, glowColor);
+
+            if (reticleLeftPath != null && reticleRightPath != null)
+            {
+                reticleLeftPath.Stroke = new SolidColorBrush(glowColor);
+                reticleRightPath.Stroke = new SolidColorBrush(glowColor);
+
+                DropShadowEffect rEff1 = new DropShadowEffect();
+                rEff1.Color = glowColor;
+                rEff1.BlurRadius = rad;
+                rEff1.ShadowDepth = 0;
+                rEff1.Opacity = op;
+                reticleLeftPath.Effect = rEff1;
+
+                DropShadowEffect rEff2 = new DropShadowEffect();
+                rEff2.Color = glowColor;
+                rEff2.BlurRadius = rad;
+                rEff2.ShadowDepth = 0;
+                rEff2.Opacity = op;
+                reticleRightPath.Effect = rEff2;
+            }
+
+            if (telemetryBorder != null && txtTelemetryText != null)
+            {
+                telemetryBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(100, glowColor.R, glowColor.G, glowColor.B));
+                txtTelemetryText.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(215, 230, 245));
+            }
         }
 
         public void UpdateColonAnimation()
@@ -751,6 +883,22 @@ namespace GothicClock
             BoxDay.SetFontSize(DayFontSize);
             BoxDate.SetFontSize(DateFontSize);
 
+            if (reticleLeftViewbox != null && reticleRightViewbox != null)
+            {
+                reticleLeftViewbox.Width = TimeFontSize * 0.40;
+                reticleLeftViewbox.Height = TimeFontSize * 1.05;
+                reticleRightViewbox.Width = TimeFontSize * 0.40;
+                reticleRightViewbox.Height = TimeFontSize * 1.05;
+
+                reticleLeftViewbox.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
+                reticleRightViewbox.Visibility = ShowCyberHud ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            if (telemetryBorder != null)
+            {
+                telemetryBorder.Visibility = ShowTelemetryBar ? Visibility.Visible : Visibility.Collapsed;
+            }
+
             dividerGrid.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
             BoxDay.Container.Margin = new Thickness(0, LineSpacing, 0, LineSpacing);
 
@@ -777,18 +925,35 @@ namespace GothicClock
         public void SetMoveMode(bool enable)
         {
             IsMoveMode = enable;
-            if (enable)
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd != IntPtr.Zero)
             {
-                mainBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 59, 130, 246));
-                mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
-                this.Cursor = System.Windows.Input.Cursors.SizeAll;
-                this.Topmost = true;
-            }
-            else
-            {
-                SetGlassPlate(ShowGlassBackplate);
-                this.Cursor = System.Windows.Input.Cursors.Arrow;
-                AttachToDesktop();
+                int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                if (enable)
+                {
+                    // Remove click-through so user can drag
+                    SetWindowLong(hwnd, GWL_EXSTYLE, (exStyle & ~WS_EX_TRANSPARENT) | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+                    mainBorder.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 245, 158, 11));
+                    mainBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(60, 0, 0, 0));
+                    this.Cursor = System.Windows.Input.Cursors.SizeAll;
+                    this.Topmost = true;
+                }
+                else
+                {
+                    int targetStyle = (exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+                    if (IsAlwaysOnTop)
+                    {
+                        targetStyle |= WS_EX_TRANSPARENT;
+                    }
+                    else
+                    {
+                        targetStyle &= ~WS_EX_TRANSPARENT;
+                    }
+                    SetWindowLong(hwnd, GWL_EXSTYLE, targetStyle);
+                    SetGlassPlate(ShowGlassBackplate);
+                    this.Cursor = System.Windows.Input.Cursors.Arrow;
+                    AttachToDesktop();
+                }
             }
         }
 
@@ -797,13 +962,7 @@ namespace GothicClock
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             if (hwnd == IntPtr.Zero) return;
 
-            if (IsMoveMode)
-            {
-                this.Topmost = true;
-                return;
-            }
-
-            if (IsAlwaysOnTop)
+            if (IsMoveMode || IsAlwaysOnTop)
             {
                 this.Topmost = true;
                 SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -884,7 +1043,12 @@ namespace GothicClock
 
             IntPtr hwnd = new WindowInteropHelper(this).Handle;
             int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+            int targetStyle = exStyle | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+            if (IsAlwaysOnTop && !IsMoveMode)
+            {
+                targetStyle |= WS_EX_TRANSPARENT;
+            }
+            SetWindowLong(hwnd, GWL_EXSTYLE, targetStyle);
 
             HwndSource source = PresentationSource.FromVisual(this) as HwndSource;
             if (source != null)
@@ -924,8 +1088,16 @@ namespace GothicClock
                     pos.flags |= SWP_SHOWWINDOW;
                 }
 
-                // Never force HWND_BOTTOM! Preserve Z-order so it never gets buried behind the desktop/wallpaper
-                pos.flags |= 0x0004u; // SWP_NOZORDER
+                if (IsAlwaysOnTop || IsMoveMode)
+                {
+                    pos.hwndInsertAfter = HWND_TOPMOST;
+                    pos.flags &= ~0x0004u; // Clear SWP_NOZORDER so HWND_TOPMOST takes effect!
+                }
+                else
+                {
+                    pos.hwndInsertAfter = HWND_NOTOPMOST;
+                    pos.flags &= ~0x0004u;
+                }
 
                 Marshal.StructureToPtr(pos, lParam, true);
                 handled = true;
@@ -1153,11 +1325,12 @@ namespace GothicClock
         private NotifyIcon trayIcon;
         private string configPath;
 
-        private System.Windows.Controls.Button btnHeaderStatus;
-        private System.Windows.Controls.Button btnHeaderThemes;
+        private System.Windows.Controls.Button btnTabSettings;
+        private System.Windows.Controls.Button btnTabMods;
         private System.Windows.Controls.Button btnMoveMode;
         private System.Windows.Controls.Button btnPreviewAnim;
-        private ScrollViewer scroll;
+        private ScrollViewer scrollSettings;
+        private ScrollViewer scrollMods;
 
         // Master scale & spacing
         private System.Windows.Controls.Slider sliderMasterScale;
@@ -1175,6 +1348,8 @@ namespace GothicClock
         private TextBlock txtGlowRadiusVal;
         private System.Windows.Controls.ComboBox cmbMotionStyle;
         private System.Windows.Controls.ComboBox cmbColonStyle;
+        private CyberToggle toggleCyberHud;
+        private CyberToggle toggleTelemetry;
         private CyberToggle toggleDivider;
         private CyberToggle toggleGlass;
 
@@ -1528,48 +1703,17 @@ namespace GothicClock
             tbTitle.FontWeight = FontWeights.Bold;
             tbTitle.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 51, 85));
             tbTitle.VerticalAlignment = VerticalAlignment.Center;
-            tbTitle.Margin = new Thickness(0, 0, 12, 0);
+            tbTitle.Margin = new Thickness(0, 0, 14, 0);
             spTitleLeft.Children.Add(tbTitle);
 
-            // Header Pill 1: Settings / Status (Active)
-            btnHeaderStatus = new System.Windows.Controls.Button();
-            btnHeaderStatus.Content = "Widget: ON";
-            btnHeaderStatus.Height = 24;
-            btnHeaderStatus.Padding = new Thickness(10, 0, 10, 0);
-            btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-            btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 32, 40));
-            btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 229, 255));
-            btnHeaderStatus.BorderThickness = new Thickness(1);
-            btnHeaderStatus.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            btnHeaderStatus.FontSize = 10.5;
-            btnHeaderStatus.FontWeight = FontWeights.Bold;
-            btnHeaderStatus.Cursor = System.Windows.Input.Cursors.Hand;
-            btnHeaderStatus.Margin = new Thickness(0, 0, 6, 0);
-            btnHeaderStatus.Click += delegate {
-                isMasterActive = !isMasterActive;
-                ApplyMasterActive();
-                SaveConfig();
-            };
-            spTitleLeft.Children.Add(btnHeaderStatus);
+            // Header Tabs [Settings] and [Mods] matching Image 4
+            btnTabSettings = CreatePillTab("Settings", true);
+            btnTabSettings.Click += delegate { SwitchTab("Settings"); };
+            spTitleLeft.Children.Add(btnTabSettings);
 
-            // Header Pill 2: Aura Themes
-            btnHeaderThemes = new System.Windows.Controls.Button();
-            btnHeaderThemes.Content = "Aura Themes";
-            btnHeaderThemes.Height = 24;
-            btnHeaderThemes.Padding = new Thickness(10, 0, 10, 0);
-            btnHeaderThemes.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 77, 109));
-            btnHeaderThemes.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 10, 18));
-            btnHeaderThemes.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 24, 38));
-            btnHeaderThemes.BorderThickness = new Thickness(1);
-            btnHeaderThemes.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            btnHeaderThemes.FontSize = 10.5;
-            btnHeaderThemes.FontWeight = FontWeights.Bold;
-            btnHeaderThemes.Cursor = System.Windows.Input.Cursors.Hand;
-            btnHeaderThemes.Margin = new Thickness(0, 0, 6, 0);
-            btnHeaderThemes.Click += delegate {
-                if (scroll != null) scroll.ScrollToVerticalOffset(280);
-            };
-            spTitleLeft.Children.Add(btnHeaderThemes);
+            btnTabMods = CreatePillTab("Mods", false);
+            btnTabMods.Click += delegate { SwitchTab("Mods"); };
+            spTitleLeft.Children.Add(btnTabMods);
 
             titleBar.Children.Add(spTitleLeft);
 
@@ -1591,20 +1735,24 @@ namespace GothicClock
             mainDock.Children.Add(titleBar);
 
             // =================================================================
-            // 2. SCROLLABLE MAINFRAME BODY
+            // 2. MAINFRAME BODY TABS (SETTINGS & MODS)
             // =================================================================
-            scroll = new ScrollViewer();
-            scroll.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            scroll.Background = System.Windows.Media.Brushes.Transparent;
-            scroll.BorderThickness = new Thickness(0);
-
-            StackPanel content = new StackPanel();
-            content.Margin = new Thickness(4, 4, 8, 12);
+            Grid bodyGrid = new Grid();
 
             // -----------------------------------------------------------------
-            // SECTION 1: CHRONO CORE (BRAIN)
+            // TAB 1: SETTINGS (CHRONO CIRCUITS, DISPLAY LAYER, COORDINATES)
             // -----------------------------------------------------------------
-            content.Children.Add(CreateCyberSectionHeader("CHRONO CORE", "Universal Roll Engine"));
+            scrollSettings = new ScrollViewer();
+            scrollSettings.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            scrollSettings.Background = System.Windows.Media.Brushes.Transparent;
+            scrollSettings.BorderThickness = new Thickness(0);
+            scrollSettings.Visibility = Visibility.Visible;
+
+            StackPanel contentSettings = new StackPanel();
+            contentSettings.Margin = new Thickness(4, 4, 8, 12);
+
+            // SECTION 1: CHRONO CIRCUITS (BRAIN)
+            contentSettings.Children.Add(CreateCyberSectionHeader("CHRONO CORE", "Universal Roll Engine"));
 
             TextBlock tbCoreSub = new TextBlock();
             tbCoreSub.Text = "Master scale and precision synchronization for all clock elements";
@@ -1612,10 +1760,10 @@ namespace GothicClock
             tbCoreSub.FontSize = 10.5;
             tbCoreSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(142, 117, 130));
             tbCoreSub.Margin = new Thickness(4, 0, 0, 6);
-            content.Children.Add(tbCoreSub);
+            contentSettings.Children.Add(tbCoreSub);
 
             // Master Scale Slider
-            content.Children.Add(CreateCyberFieldLabel("Master Chrono Scale (Widget Zoom):"));
+            contentSettings.Children.Add(CreateCyberFieldLabel("Master Chrono Scale (Widget Zoom):"));
             DockPanel dpMasterScale = new DockPanel();
             dpMasterScale.Margin = new Thickness(4, 0, 0, 6);
 
@@ -1645,7 +1793,7 @@ namespace GothicClock
 
             dpMasterScale.Children.Add(txtMasterScaleVal);
             dpMasterScale.Children.Add(sliderMasterScale);
-            content.Children.Add(dpMasterScale);
+            contentSettings.Children.Add(dpMasterScale);
 
             // Quick Scale Presets
             UniformGrid gridPresets = new UniformGrid();
@@ -1656,10 +1804,10 @@ namespace GothicClock
             gridPresets.Children.Add(CreateSmallPresetButton("85%", 0.85));
             gridPresets.Children.Add(CreateSmallPresetButton("120%", 1.20));
             gridPresets.Children.Add(CreateSmallPresetButton("180%", 1.80));
-            content.Children.Add(gridPresets);
+            contentSettings.Children.Add(gridPresets);
 
             // Spacing Slider
-            content.Children.Add(CreateCyberFieldLabel("Vertical Element Line Spacing:"));
+            contentSettings.Children.Add(CreateCyberFieldLabel("Vertical Element Line Spacing:"));
             DockPanel dpSpacing = new DockPanel();
             dpSpacing.Margin = new Thickness(4, 0, 0, 6);
 
@@ -1689,181 +1837,19 @@ namespace GothicClock
 
             dpSpacing.Children.Add(txtSpacingVal);
             dpSpacing.Children.Add(sliderSpacing);
-            content.Children.Add(dpSpacing);
+            contentSettings.Children.Add(dpSpacing);
 
-            // Universal Animation Diamond Toggle
-            toggleAnim = new CyberToggle("UNIVERSAL ROLLING ANIMATION", "Smooth vertical digit physics across all rows", true, delegate(bool val) {
-                widget.EnableAnimation = val;
-                SaveConfig();
-            });
-            content.Children.Add(toggleAnim.Container);
-
-            // Animation Speed
-            content.Children.Add(CreateCyberFieldLabel("Animation Roll Duration:"));
-            DockPanel dpAnimSpeed = new DockPanel();
-            dpAnimSpeed.Margin = new Thickness(4, 0, 0, 6);
-
-            txtAnimSpeedVal = new TextBlock();
-            txtAnimSpeedVal.Text = "320ms";
-            txtAnimSpeedVal.Width = 46;
-            txtAnimSpeedVal.TextAlignment = TextAlignment.Right;
-            txtAnimSpeedVal.VerticalAlignment = VerticalAlignment.Center;
-            txtAnimSpeedVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            txtAnimSpeedVal.FontWeight = FontWeights.Bold;
-            txtAnimSpeedVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-            DockPanel.SetDock(txtAnimSpeedVal, Dock.Right);
-
-            sliderAnimSpeed = new System.Windows.Controls.Slider();
-            sliderAnimSpeed.Minimum = 150;
-            sliderAnimSpeed.Maximum = 600;
-            sliderAnimSpeed.Value = 320;
-            sliderAnimSpeed.TickFrequency = 10;
-            sliderAnimSpeed.IsSnapToTickEnabled = true;
-            sliderAnimSpeed.Margin = new Thickness(0, 0, 10, 0);
-            sliderAnimSpeed.ValueChanged += delegate {
-                widget.AnimationDurationMs = (int)Math.Round(sliderAnimSpeed.Value);
-                txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
-                SaveConfig();
-            };
-
-            dpAnimSpeed.Children.Add(txtAnimSpeedVal);
-            dpAnimSpeed.Children.Add(sliderAnimSpeed);
-            content.Children.Add(dpAnimSpeed);
-
-            btnPreviewAnim = CreateCyberButton("[ TEST ROLLING DIGIT ANIMATION ]", 30);
-            btnPreviewAnim.Margin = new Thickness(2, 2, 2, 6);
-            btnPreviewAnim.Click += delegate {
-                widget.ForceRollAll();
-            };
-            content.Children.Add(btnPreviewAnim);
-
-            content.Children.Add(CreateAmberCallout("Universal digit roll engine synchronizes hours, minutes, and rolling seconds simultaneously."));
-
-            // -----------------------------------------------------------------
-            // SECTION 2: REIATSU & NEON AURA (VOICE)
-            // -----------------------------------------------------------------
-            content.Children.Add(CreateCyberSectionHeader("REIATSU & NEON AURA", "Spiritual Glow Physics"));
-
-            TextBlock tbAuraSub = new TextBlock();
-            tbAuraSub.Text = "Select spiritual pressure aura or custom atmospheric bloom";
-            tbAuraSub.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            tbAuraSub.FontSize = 10.5;
-            tbAuraSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(142, 117, 130));
-            tbAuraSub.Margin = new Thickness(4, 0, 0, 6);
-            content.Children.Add(tbAuraSub);
-
-            // Diamond Theme Selectors
-            themeItems.Clear();
-            themeItems.Add(new ThemeOptionItem("Getsuga", "Getsuga", "月牙天衝 · Pure Bone White with Crimson Blood Reiatsu", System.Windows.Media.Color.FromRgb(225, 29, 72), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Bankai", "Bankai", "天鎖斬月 · Stark Pure White with Void Shadow", System.Windows.Media.Color.FromRgb(250, 250, 255), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Hollow", "Hollow", "虚化 · Hollow Bone White with Dark Blood Crimson", System.Windows.Media.Color.FromRgb(153, 27, 27), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Ichigo", "Ichigo", "黒崎一護 · Radiant Light with Flame Reiatsu Orange", System.Windows.Media.Color.FromRgb(234, 88, 12), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Quincy", "Quincy", "滅却師 · Spirit Silver with Sacred Quincy Blue", System.Windows.Media.Color.FromRgb(2, 132, 199), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Cero", "Cero", "黒虚閃 · Spectral White with Ulquiorra Emerald", System.Windows.Media.Color.FromRgb(16, 185, 129), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Senbonzakura", "Senbonzakura", "千本桜 · Cherry Blossom Reiatsu Pink", System.Windows.Media.Color.FromRgb(244, 63, 94), SelectTheme));
-            themeItems.Add(new ThemeOptionItem("Moonlight", "Moonlight", "月光 · Classic Gothic Moonlight Silver", System.Windows.Media.Color.FromRgb(148, 163, 184), SelectTheme));
-
-            foreach (var item in themeItems)
-            {
-                content.Children.Add(item.Container);
-            }
-
-            // Spiritual Pressure Bloom Radius Slider
-            content.Children.Add(CreateCyberFieldLabel("Spiritual Pressure (Bloom Radius):"));
-            DockPanel dpGlowRad = new DockPanel();
-            dpGlowRad.Margin = new Thickness(4, 0, 0, 6);
-
-            txtGlowRadiusVal = new TextBlock();
-            txtGlowRadiusVal.Text = "18px";
-            txtGlowRadiusVal.Width = 46;
-            txtGlowRadiusVal.TextAlignment = TextAlignment.Right;
-            txtGlowRadiusVal.VerticalAlignment = VerticalAlignment.Center;
-            txtGlowRadiusVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
-            txtGlowRadiusVal.FontWeight = FontWeights.Bold;
-            txtGlowRadiusVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-            DockPanel.SetDock(txtGlowRadiusVal, Dock.Right);
-
-            sliderGlowRadius = new System.Windows.Controls.Slider();
-            sliderGlowRadius.Minimum = 0;
-            sliderGlowRadius.Maximum = 40;
-            sliderGlowRadius.Value = 18;
-            sliderGlowRadius.TickFrequency = 1;
-            sliderGlowRadius.IsSnapToTickEnabled = true;
-            sliderGlowRadius.Margin = new Thickness(0, 0, 10, 0);
-            sliderGlowRadius.ValueChanged += delegate {
-                widget.GlowRadius = Math.Round(sliderGlowRadius.Value);
-                txtGlowRadiusVal.Text = widget.GlowRadius + "px";
-                widget.SetGlowTheme(widget.GlowTheme);
-                SaveConfig();
-            };
-
-            dpGlowRad.Children.Add(txtGlowRadiusVal);
-            dpGlowRad.Children.Add(sliderGlowRadius);
-            content.Children.Add(dpGlowRad);
-
-            // Motion Easing Style
-            content.Children.Add(CreateCyberFieldLabel("Animation Motion Physics:"));
-            cmbMotionStyle = new System.Windows.Controls.ComboBox();
-            cmbMotionStyle.Items.Add("Tactile Spring Snap (Overshoot Bounce)");
-            cmbMotionStyle.Items.Add("Smooth Fluid Glide (Cubic Ease)");
-            cmbMotionStyle.Items.Add("Micro Bounce");
-            cmbMotionStyle.Items.Add("Classic Linear");
-            cmbMotionStyle.SelectedIndex = 0;
-            cmbMotionStyle.Margin = new Thickness(2, 0, 2, 6);
-            cmbMotionStyle.SelectionChanged += delegate {
-                if (cmbMotionStyle.SelectedIndex == 0) widget.MotionStyle = "Spring";
-                else if (cmbMotionStyle.SelectedIndex == 1) widget.MotionStyle = "Smooth";
-                else if (cmbMotionStyle.SelectedIndex == 2) widget.MotionStyle = "Bounce";
-                else if (cmbMotionStyle.SelectedIndex == 3) widget.MotionStyle = "Linear";
-                widget.SetGlowTheme(widget.GlowTheme);
-                SaveConfig();
-            };
-            content.Children.Add(cmbMotionStyle);
-
-            // Colon Pulse Style
-            content.Children.Add(CreateCyberFieldLabel("Colon (:) Pulse Effect:"));
-            cmbColonStyle = new System.Windows.Controls.ComboBox();
-            cmbColonStyle.Items.Add("Smooth Breathing Pulse (Hypnotic Sine-Wave)");
-            cmbColonStyle.Items.Add("1-Second Rhythm Blink");
-            cmbColonStyle.Items.Add("Solid (Static)");
-            cmbColonStyle.SelectedIndex = 0;
-            cmbColonStyle.Margin = new Thickness(2, 0, 2, 6);
-            cmbColonStyle.SelectionChanged += delegate {
-                if (cmbColonStyle.SelectedIndex == 0) widget.ColonStyle = "Breath";
-                else if (cmbColonStyle.SelectedIndex == 1) widget.ColonStyle = "Blink";
-                else if (cmbColonStyle.SelectedIndex == 2) widget.ColonStyle = "Solid";
-                widget.UpdateColonAnimation();
-                SaveConfig();
-            };
-            content.Children.Add(cmbColonStyle);
-
-            // Toggles for divider and glass plate
-            toggleDivider = new CyberToggle("ORNATE GOTHIC DIAMOND DIVIDER", "Filigree accent divider between time and date", true, delegate(bool val) {
-                widget.ShowDivider = val;
-                widget.RefreshAppearance();
-                SaveConfig();
-            });
-            content.Children.Add(toggleDivider.Container);
-
-            toggleGlass = new CyberToggle("SMOKED CYBER-GLASS BACKPLATE", "Translucent dark acrylic backplate", false, delegate(bool val) {
-                widget.SetGlassPlate(val);
-                SaveConfig();
-            });
-            content.Children.Add(toggleGlass.Container);
-
-            // -----------------------------------------------------------------
-            // SECTION 3: TIME CIRCUITS
-            // -----------------------------------------------------------------
-            content.Children.Add(CreateCyberSectionHeader("TIME CIRCUITS", "12H / 24H Cycle"));
+            // TIME CIRCUITS
+            contentSettings.Children.Add(CreateCyberSectionHeader("TIME CIRCUITS", "Hours · Minutes · Seconds"));
 
             toggleShowTime = new CyberToggle("SHOW TIME ELEMENT", "Primary chrono display (hours, minutes, seconds)", true, delegate(bool val) {
                 widget.ShowTime = val;
                 widget.RefreshAppearance();
                 SaveConfig();
             });
-            content.Children.Add(toggleShowTime.Container);
+            contentSettings.Children.Add(toggleShowTime.Container);
 
-            content.Children.Add(CreateCyberFieldLabel("Time Font Size (Chrono Scale):"));
+            contentSettings.Children.Add(CreateCyberFieldLabel("Time Font Size (Chrono Scale):"));
             DockPanel dpTimeSize = new DockPanel();
             dpTimeSize.Margin = new Thickness(4, 0, 0, 6);
 
@@ -1893,35 +1879,33 @@ namespace GothicClock
 
             dpTimeSize.Children.Add(txtTimeSizeVal);
             dpTimeSize.Children.Add(sliderTimeSize);
-            content.Children.Add(dpTimeSize);
+            contentSettings.Children.Add(dpTimeSize);
 
             toggle12Hour = new CyberToggle("12-HOUR CYCLE (AM/PM)", "Standard 12h format or 24h military chrono", true, delegate(bool val) {
                 widget.Is12Hour = val;
                 widget.RefreshAppearance();
                 SaveConfig();
             });
-            content.Children.Add(toggle12Hour.Container);
+            contentSettings.Children.Add(toggle12Hour.Container);
 
             toggleSeconds = new CyberToggle("SHOW ROLLING SECONDS", "Live ticking vertical seconds flip", true, delegate(bool val) {
                 widget.ShowSeconds = val;
                 widget.RefreshAppearance();
                 SaveConfig();
             });
-            content.Children.Add(toggleSeconds.Container);
+            contentSettings.Children.Add(toggleSeconds.Container);
 
-            // -----------------------------------------------------------------
-            // SECTION 4: DAY & DATE TELEMETRY
-            // -----------------------------------------------------------------
-            content.Children.Add(CreateCyberSectionHeader("DAY & DATE TELEMETRY", "Inscription Core"));
+            // DAY & DATE TELEMETRY
+            contentSettings.Children.Add(CreateCyberSectionHeader("CALENDAR TELEMETRY", "Inscription Core"));
 
             toggleShowDay = new CyberToggle("SHOW DAY OF WEEK", "e.g. Wednesday", true, delegate(bool val) {
                 widget.ShowDay = val;
                 widget.RefreshAppearance();
                 SaveConfig();
             });
-            content.Children.Add(toggleShowDay.Container);
+            contentSettings.Children.Add(toggleShowDay.Container);
 
-            content.Children.Add(CreateCyberFieldLabel("Day Font Size:"));
+            contentSettings.Children.Add(CreateCyberFieldLabel("Day Font Size:"));
             DockPanel dpDaySize = new DockPanel();
             dpDaySize.Margin = new Thickness(4, 0, 0, 6);
 
@@ -1951,23 +1935,23 @@ namespace GothicClock
 
             dpDaySize.Children.Add(txtDaySizeVal);
             dpDaySize.Children.Add(sliderDaySize);
-            content.Children.Add(dpDaySize);
+            contentSettings.Children.Add(dpDaySize);
 
             toggleTodayPrefix = new CyberToggle("INCLUDE 'TODAY IS' PREFIX", "e.g. Today is Wednesday vs Wednesday", true, delegate(bool val) {
                 widget.ShowTodayPrefix = val;
                 widget.RefreshAppearance();
                 SaveConfig();
             });
-            content.Children.Add(toggleTodayPrefix.Container);
+            contentSettings.Children.Add(toggleTodayPrefix.Container);
 
             toggleShowDate = new CyberToggle("SHOW DATE ELEMENT", "Calendar date inscription", true, delegate(bool val) {
                 widget.ShowDate = val;
                 widget.RefreshAppearance();
                 SaveConfig();
             });
-            content.Children.Add(toggleShowDate.Container);
+            contentSettings.Children.Add(toggleShowDate.Container);
 
-            content.Children.Add(CreateCyberFieldLabel("Date Font Size:"));
+            contentSettings.Children.Add(CreateCyberFieldLabel("Date Font Size:"));
             DockPanel dpDateSize = new DockPanel();
             dpDateSize.Margin = new Thickness(4, 0, 0, 6);
 
@@ -1997,9 +1981,9 @@ namespace GothicClock
 
             dpDateSize.Children.Add(txtDateSizeVal);
             dpDateSize.Children.Add(sliderDateSize);
-            content.Children.Add(dpDateSize);
+            contentSettings.Children.Add(dpDateSize);
 
-            content.Children.Add(CreateCyberFieldLabel("Date Format Archetype:"));
+            contentSettings.Children.Add(CreateCyberFieldLabel("Date Format Archetype:"));
             cmbDateFormat = new System.Windows.Controls.ComboBox();
             cmbDateFormat.Items.Add("MM/dd/yyyy  (11/11/2026)");
             cmbDateFormat.Items.Add("dd/MM/yyyy  (11/11/2026)");
@@ -2015,12 +1999,45 @@ namespace GothicClock
                 widget.RefreshAppearance();
                 SaveConfig();
             };
-            content.Children.Add(cmbDateFormat);
+            contentSettings.Children.Add(cmbDateFormat);
 
-            // -----------------------------------------------------------------
-            // SECTION 5: COORDINATES & POSITION (CAPRI)
-            // -----------------------------------------------------------------
-            content.Children.Add(CreateCyberSectionHeader("COORDINATES & POSITION", "Drag & Anchor"));
+            // DISPLAY LAYER & DEPTH
+            contentSettings.Children.Add(CreateCyberSectionHeader("DISPLAY LAYER & DEPTH", "Anti-Hide · Click-Through"));
+
+            TextBlock tbDepthSub = new TextBlock();
+            tbDepthSub.Text = "Immune to Win+D / Ctrl+D minimize gestures with seamless pass-through";
+            tbDepthSub.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
+            tbDepthSub.FontSize = 10;
+            tbDepthSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(142, 117, 130));
+            tbDepthSub.Margin = new Thickness(4, 0, 0, 6);
+            contentSettings.Children.Add(tbDepthSub);
+
+            toggleAlwaysOnTop = new CyberToggle("ALWAYS ON TOP (CYBER HUD OVERLAY)", "Floats above all full-screen windows and apps (Click-Through)", widget.IsAlwaysOnTop, delegate(bool val) {
+                widget.IsAlwaysOnTop = val;
+                if (val && widget.StayOnDesktop)
+                {
+                    widget.StayOnDesktop = false;
+                    if (toggleStayDesktop != null) toggleStayDesktop.IsChecked = false;
+                }
+                widget.AttachToDesktop();
+                SaveConfig();
+            });
+            contentSettings.Children.Add(toggleAlwaysOnTop.Container);
+
+            toggleStayDesktop = new CyberToggle("STAY AT MAIN DESKTOP LAYER", "Pins above wallpaper & icons, survives Win+D show-desktop", widget.StayOnDesktop, delegate(bool val) {
+                widget.StayOnDesktop = val;
+                if (val && widget.IsAlwaysOnTop)
+                {
+                    widget.IsAlwaysOnTop = false;
+                    if (toggleAlwaysOnTop != null) toggleAlwaysOnTop.IsChecked = false;
+                }
+                widget.AttachToDesktop();
+                SaveConfig();
+            });
+            contentSettings.Children.Add(toggleStayDesktop.Container);
+
+            // COORDINATES & POSITION (CAPRI)
+            contentSettings.Children.Add(CreateCyberSectionHeader("COORDINATES & NAVIGATION", "HUD Positioning"));
 
             UniformGrid gridPos1 = new UniformGrid();
             gridPos1.Columns = 3;
@@ -2038,7 +2055,7 @@ namespace GothicClock
             gridPos1.Children.Add(btnTR);
             gridPos1.Children.Add(btnTL);
             gridPos1.Children.Add(btnCenter);
-            content.Children.Add(gridPos1);
+            contentSettings.Children.Add(gridPos1);
 
             UniformGrid gridPos2 = new UniformGrid();
             gridPos2.Columns = 3;
@@ -2056,7 +2073,7 @@ namespace GothicClock
             gridPos2.Children.Add(btnBR);
             gridPos2.Children.Add(btnBL);
             gridPos2.Children.Add(btnReset);
-            content.Children.Add(gridPos2);
+            contentSettings.Children.Add(gridPos2);
 
             btnMoveMode = CreateCyberButton("[ ENTER MOVE MODE // DRAG ON SCREEN ]", 32);
             btnMoveMode.Margin = new Thickness(2, 2, 2, 6);
@@ -2079,48 +2096,236 @@ namespace GothicClock
                     SaveConfig();
                 }
             };
-            content.Children.Add(btnMoveMode);
+            contentSettings.Children.Add(btnMoveMode);
+
+            // CONTROL ACTIONS
+            contentSettings.Children.Add(CreateCyberSectionHeader("CONTROL ACTIONS", "Status"));
+
+            UniformGrid gridSettingsActions = new UniformGrid();
+            gridSettingsActions.Columns = 2;
+            gridSettingsActions.Margin = new Thickness(2, 4, 2, 4);
+
+            System.Windows.Controls.Button btnMinSettings = CreateCyberButton("[ MINIMIZE TO TRAY ]", 30);
+            btnMinSettings.Click += delegate { this.AnimateClose(); };
+
+            System.Windows.Controls.Button btnQuitSettings = CreateCyberButton("[ QUIT APP ]", 30);
+            btnQuitSettings.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 42, 85));
+            btnQuitSettings.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 80, 100));
+            btnQuitSettings.Click += delegate { ShutdownApplication(); };
+
+            gridSettingsActions.Children.Add(btnMinSettings);
+            gridSettingsActions.Children.Add(btnQuitSettings);
+            contentSettings.Children.Add(gridSettingsActions);
+
+            scrollSettings.Content = contentSettings;
+            bodyGrid.Children.Add(scrollSettings);
 
             // -----------------------------------------------------------------
-            // SECTION 6: SYSTEM DAEMON & MAINTENANCE
+            // TAB 2: MODS (CYBER HUD, TELEMETRY, THEMES, PULSE, SHUTDOWN FX)
             // -----------------------------------------------------------------
-            content.Children.Add(CreateCyberSectionHeader("SYSTEM DAEMON", "WorkerW Layer · Win+D Immune"));
+            scrollMods = new ScrollViewer();
+            scrollMods.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            scrollMods.Background = System.Windows.Media.Brushes.Transparent;
+            scrollMods.BorderThickness = new Thickness(0);
+            scrollMods.Visibility = Visibility.Collapsed;
+
+            StackPanel contentMods = new StackPanel();
+            contentMods.Margin = new Thickness(4, 4, 8, 12);
+
+            // SECTION 1: CYBER HUD & VECTORS (Direct fix for Image 1, 2, 3)
+            contentMods.Children.Add(CreateCyberSectionHeader("CYBER HUD & VECTORS", "Chamfered Optics"));
+
+            TextBlock tbHudSub = new TextBlock();
+            tbHudSub.Text = "Hardware-accelerated vector brackets with rangefinder notches & neon glow";
+            tbHudSub.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
+            tbHudSub.FontSize = 10;
+            tbHudSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(142, 117, 130));
+            tbHudSub.Margin = new Thickness(4, 0, 0, 6);
+            contentMods.Children.Add(tbHudSub);
+
+            toggleCyberHud = new CyberToggle("CYBERPUNK HUD RETICLE BRACKETS", "Chamfered vector corner frames with rangefinder ticks", widget.ShowCyberHud, delegate(bool val) {
+                widget.ShowCyberHud = val;
+                widget.RefreshAppearance();
+                SaveConfig();
+            });
+            contentMods.Children.Add(toggleCyberHud.Container);
+
+            toggleTelemetry = new CyberToggle("CYBER TELEMETRY CAPSULE BAR", "SYS.2077 // NIGHT_CITY // SYNC_OK live telemetry", widget.ShowTelemetryBar, delegate(bool val) {
+                widget.ShowTelemetryBar = val;
+                widget.RefreshAppearance();
+                SaveConfig();
+            });
+            contentMods.Children.Add(toggleTelemetry.Container);
+
+            toggleDivider = new CyberToggle("ORNATE GOTHIC DIAMOND DIVIDER", "Filigree accent divider between time and date", widget.ShowDivider, delegate(bool val) {
+                widget.ShowDivider = val;
+                widget.RefreshAppearance();
+                SaveConfig();
+            });
+            contentMods.Children.Add(toggleDivider.Container);
+
+            toggleGlass = new CyberToggle("SMOKED CYBER-GLASS BACKPLATE", "Translucent dark acrylic backplate", widget.ShowGlassBackplate, delegate(bool val) {
+                widget.SetGlassPlate(val);
+                SaveConfig();
+            });
+            contentMods.Children.Add(toggleGlass.Container);
+
+            // SECTION 2: MOTION DYNAMICS
+            contentMods.Children.Add(CreateCyberSectionHeader("MOTION DYNAMICS", "Kinetic Physics Engine"));
+
+            toggleAnim = new CyberToggle("UNIVERSAL ROLLING ANIMATION", "Smooth vertical digit physics across all rows", widget.EnableAnimation, delegate(bool val) {
+                widget.EnableAnimation = val;
+                SaveConfig();
+            });
+            contentMods.Children.Add(toggleAnim.Container);
+
+            contentMods.Children.Add(CreateCyberFieldLabel("Animation Roll Duration:"));
+            DockPanel dpAnimSpeed = new DockPanel();
+            dpAnimSpeed.Margin = new Thickness(4, 0, 0, 6);
+
+            txtAnimSpeedVal = new TextBlock();
+            txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
+            txtAnimSpeedVal.Width = 46;
+            txtAnimSpeedVal.TextAlignment = TextAlignment.Right;
+            txtAnimSpeedVal.VerticalAlignment = VerticalAlignment.Center;
+            txtAnimSpeedVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
+            txtAnimSpeedVal.FontWeight = FontWeights.Bold;
+            txtAnimSpeedVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            DockPanel.SetDock(txtAnimSpeedVal, Dock.Right);
+
+            sliderAnimSpeed = new System.Windows.Controls.Slider();
+            sliderAnimSpeed.Minimum = 150;
+            sliderAnimSpeed.Maximum = 600;
+            sliderAnimSpeed.Value = widget.AnimationDurationMs;
+            sliderAnimSpeed.TickFrequency = 10;
+            sliderAnimSpeed.IsSnapToTickEnabled = true;
+            sliderAnimSpeed.Margin = new Thickness(0, 0, 10, 0);
+            sliderAnimSpeed.ValueChanged += delegate {
+                widget.AnimationDurationMs = (int)Math.Round(sliderAnimSpeed.Value);
+                txtAnimSpeedVal.Text = widget.AnimationDurationMs + "ms";
+                SaveConfig();
+            };
+
+            dpAnimSpeed.Children.Add(txtAnimSpeedVal);
+            dpAnimSpeed.Children.Add(sliderAnimSpeed);
+            contentMods.Children.Add(dpAnimSpeed);
+
+            btnPreviewAnim = CreateCyberButton("[ TEST ROLLING DIGIT ANIMATION ]", 30);
+            btnPreviewAnim.Margin = new Thickness(2, 2, 2, 6);
+            btnPreviewAnim.Click += delegate {
+                widget.ForceRollAll();
+            };
+            contentMods.Children.Add(btnPreviewAnim);
+
+            contentMods.Children.Add(CreateCyberFieldLabel("Animation Motion Physics:"));
+            cmbMotionStyle = new System.Windows.Controls.ComboBox();
+            cmbMotionStyle.Items.Add("Tactile Spring Snap (Overshoot Bounce)");
+            cmbMotionStyle.Items.Add("Smooth Fluid Glide (Cubic Ease)");
+            cmbMotionStyle.Items.Add("Micro Bounce");
+            cmbMotionStyle.Items.Add("Classic Linear");
+            cmbMotionStyle.SelectedIndex = 0;
+            cmbMotionStyle.Margin = new Thickness(2, 0, 2, 6);
+            cmbMotionStyle.SelectionChanged += delegate {
+                if (cmbMotionStyle.SelectedIndex == 0) widget.MotionStyle = "Spring";
+                else if (cmbMotionStyle.SelectedIndex == 1) widget.MotionStyle = "Smooth";
+                else if (cmbMotionStyle.SelectedIndex == 2) widget.MotionStyle = "Bounce";
+                else if (cmbMotionStyle.SelectedIndex == 3) widget.MotionStyle = "Linear";
+                widget.SetGlowTheme(widget.GlowTheme);
+                SaveConfig();
+            };
+            contentMods.Children.Add(cmbMotionStyle);
+
+            contentMods.Children.Add(CreateCyberFieldLabel("Colon (:) Pulse Effect:"));
+            cmbColonStyle = new System.Windows.Controls.ComboBox();
+            cmbColonStyle.Items.Add("Smooth Breathing Pulse (Hypnotic Sine-Wave)");
+            cmbColonStyle.Items.Add("1-Second Rhythm Blink");
+            cmbColonStyle.Items.Add("Solid (Static)");
+            cmbColonStyle.SelectedIndex = 0;
+            cmbColonStyle.Margin = new Thickness(2, 0, 2, 6);
+            cmbColonStyle.SelectionChanged += delegate {
+                if (cmbColonStyle.SelectedIndex == 0) widget.ColonStyle = "Breath";
+                else if (cmbColonStyle.SelectedIndex == 1) widget.ColonStyle = "Blink";
+                else if (cmbColonStyle.SelectedIndex == 2) widget.ColonStyle = "Solid";
+                widget.UpdateColonAnimation();
+                SaveConfig();
+            };
+            contentMods.Children.Add(cmbColonStyle);
+
+            // SECTION 3: REIATSU & NEON AURA THEMES
+            contentMods.Children.Add(CreateCyberSectionHeader("REIATSU & NEON AURAS", "Aesthetic Modulators"));
+
+            TextBlock tbAuraSub = new TextBlock();
+            tbAuraSub.Text = "Night City neon circuits, Arasaka red, and Bleach spiritual pressure";
+            tbAuraSub.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
+            tbAuraSub.FontSize = 10;
+            tbAuraSub.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(142, 117, 130));
+            tbAuraSub.Margin = new Thickness(4, 0, 0, 6);
+            contentMods.Children.Add(tbAuraSub);
+
+            // Theme Options with Night City & Cyberpunk first
+            themeItems.Clear();
+            themeItems.Add(new ThemeOptionItem("NightCity", "Night City", "ナイトシティ · Neon Cyan Cyberpunk Optical HUD", System.Windows.Media.Color.FromRgb(0, 240, 255), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Cyberpunk", "Cyberpunk 2077", "サイバーパンク · Radiant High-Voltage Amber", System.Windows.Media.Color.FromRgb(252, 238, 10), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Getsuga", "Getsuga", "月牙天衝 · Pure Bone White with Crimson Blood Reiatsu", System.Windows.Media.Color.FromRgb(225, 29, 72), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Bankai", "Bankai", "天鎖斬月 · Stark Pure White with Void Shadow", System.Windows.Media.Color.FromRgb(250, 250, 255), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Hollow", "Hollow", "虚化 · Hollow Bone White with Dark Blood Crimson", System.Windows.Media.Color.FromRgb(153, 27, 27), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Ichigo", "Ichigo", "黒崎一護 · Radiant Light with Flame Reiatsu Orange", System.Windows.Media.Color.FromRgb(234, 88, 12), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Quincy", "Quincy", "滅却師 · Spirit Silver with Sacred Quincy Blue", System.Windows.Media.Color.FromRgb(2, 132, 199), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Cero", "Cero", "黒虚閃 · Spectral White with Ulquiorra Emerald", System.Windows.Media.Color.FromRgb(16, 185, 129), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Senbonzakura", "Senbonzakura", "千本桜 · Cherry Blossom Reiatsu Pink", System.Windows.Media.Color.FromRgb(244, 63, 94), SelectTheme));
+            themeItems.Add(new ThemeOptionItem("Moonlight", "Moonlight", "月光 · Classic Gothic Moonlight Silver", System.Windows.Media.Color.FromRgb(148, 163, 184), SelectTheme));
+
+            foreach (var item in themeItems)
+            {
+                contentMods.Children.Add(item.Container);
+            }
+
+            contentMods.Children.Add(CreateCyberFieldLabel("Spiritual Pressure (Bloom Radius):"));
+            DockPanel dpGlowRad = new DockPanel();
+            dpGlowRad.Margin = new Thickness(4, 0, 0, 6);
+
+            txtGlowRadiusVal = new TextBlock();
+            txtGlowRadiusVal.Text = widget.GlowRadius + "px";
+            txtGlowRadiusVal.Width = 46;
+            txtGlowRadiusVal.TextAlignment = TextAlignment.Right;
+            txtGlowRadiusVal.VerticalAlignment = VerticalAlignment.Center;
+            txtGlowRadiusVal.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
+            txtGlowRadiusVal.FontWeight = FontWeights.Bold;
+            txtGlowRadiusVal.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+            DockPanel.SetDock(txtGlowRadiusVal, Dock.Right);
+
+            sliderGlowRadius = new System.Windows.Controls.Slider();
+            sliderGlowRadius.Minimum = 0;
+            sliderGlowRadius.Maximum = 40;
+            sliderGlowRadius.Value = widget.GlowRadius;
+            sliderGlowRadius.TickFrequency = 1;
+            sliderGlowRadius.IsSnapToTickEnabled = true;
+            sliderGlowRadius.Margin = new Thickness(0, 0, 10, 0);
+            sliderGlowRadius.ValueChanged += delegate {
+                widget.GlowRadius = Math.Round(sliderGlowRadius.Value);
+                txtGlowRadiusVal.Text = widget.GlowRadius + "px";
+                widget.SetGlowTheme(widget.GlowTheme);
+                SaveConfig();
+            };
+
+            dpGlowRad.Children.Add(txtGlowRadiusVal);
+            dpGlowRad.Children.Add(sliderGlowRadius);
+            contentMods.Children.Add(dpGlowRad);
+
+            // SECTION 4: SYSTEM DAEMON & MAINTENANCE
+            contentMods.Children.Add(CreateCyberSectionHeader("SYSTEM DAEMON", "Win+D Immune"));
 
             toggleAutoStart = new CyberToggle("START DAEMON SILENTLY ON WINDOWS BOOT", "Auto-launches into background on user login", IsStartupEnabled(), delegate(bool val) {
                 SetStartupEnabled(val);
                 SaveConfig();
             });
-            content.Children.Add(toggleAutoStart.Container);
+            contentMods.Children.Add(toggleAutoStart.Container);
 
-            toggleStayDesktop = new CyberToggle("STAY AT MAIN DESKTOP LAYER", "Pins above wallpaper & icons, survives Win+D show-desktop", widget.StayOnDesktop, delegate(bool val) {
-                widget.StayOnDesktop = val;
-                if (val && widget.IsAlwaysOnTop)
-                {
-                    widget.IsAlwaysOnTop = false;
-                    if (toggleAlwaysOnTop != null) toggleAlwaysOnTop.IsChecked = false;
-                }
-                widget.AttachToDesktop();
-                SaveConfig();
-            });
-            content.Children.Add(toggleStayDesktop.Container);
-
-            toggleAlwaysOnTop = new CyberToggle("ALWAYS ON TOP (CYBER HUD OVERLAY)", "Floats above all full-screen windows and apps", widget.IsAlwaysOnTop, delegate(bool val) {
-                widget.IsAlwaysOnTop = val;
-                if (val && widget.StayOnDesktop)
-                {
-                    widget.StayOnDesktop = false;
-                    if (toggleStayDesktop != null) toggleStayDesktop.IsChecked = false;
-                }
-                widget.AttachToDesktop();
-                SaveConfig();
-            });
-            content.Children.Add(toggleAlwaysOnTop.Container);
-
-            toggleCloseAnimation = new CyberToggle("CYBERPUNK DE-REZ SHUTDOWN FX", "Holographic CRT electron beam collapse on window close/exit", true, delegate(bool val) {
+            toggleCloseAnimation = new CyberToggle("CYBERPUNK DE-REZ SHUTDOWN FX", "Holographic CRT electron beam collapse on window close/exit", EnableCloseAnimation, delegate(bool val) {
                 EnableCloseAnimation = val;
                 SaveConfig();
             });
-            content.Children.Add(toggleCloseAnimation.Container);
+            contentMods.Children.Add(toggleCloseAnimation.Container);
 
             System.Windows.Controls.Button btnTestDeRez = CreateCyberButton("[ PREVIEW CLOSE ANIMATION ]", 26);
             btnTestDeRez.Margin = new Thickness(2, 2, 2, 8);
@@ -2135,9 +2340,8 @@ namespace GothicClock
                     reopenTimer.Start();
                 });
             };
-            content.Children.Add(btnTestDeRez);
+            contentMods.Children.Add(btnTestDeRez);
 
-            // Bottom action buttons (like Check for updates, Help, Quit Capri)
             UniformGrid gridBottom = new UniformGrid();
             gridBottom.Columns = 3;
             gridBottom.Margin = new Thickness(2, 8, 2, 4);
@@ -2162,9 +2366,8 @@ namespace GothicClock
             gridBottom.Children.Add(btnCloseApp);
             gridBottom.Children.Add(btnQuitApp);
             gridBottom.Children.Add(btnUninstall);
-            content.Children.Add(gridBottom);
+            contentMods.Children.Add(gridBottom);
 
-            // Footer note
             TextBlock tbFooter = new TextBlock();
             tbFooter.Text = "Gothic Chronometer · Bleach & Cyberpunk Edition · Daemon Active.";
             tbFooter.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
@@ -2172,10 +2375,12 @@ namespace GothicClock
             tbFooter.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(110, 90, 101));
             tbFooter.HorizontalAlignment = System.Windows.HorizontalAlignment.Center;
             tbFooter.Margin = new Thickness(0, 4, 0, 8);
-            content.Children.Add(tbFooter);
+            contentMods.Children.Add(tbFooter);
 
-            scroll.Content = content;
-            mainDock.Children.Add(scroll);
+            scrollMods.Content = contentMods;
+            bodyGrid.Children.Add(scrollMods);
+
+            mainDock.Children.Add(bodyGrid);
 
             // Holographic Central CRT Electron Beam & Spark
             crtBeam = new System.Windows.Shapes.Rectangle();
@@ -2475,13 +2680,6 @@ namespace GothicClock
                 {
                     widget.AnimateShow();
                 }
-                if (btnHeaderStatus != null)
-                {
-                    btnHeaderStatus.Content = "Widget: ON";
-                    btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
-                    btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(12, 32, 40));
-                    btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 229, 255));
-                }
             }
             else
             {
@@ -2492,13 +2690,6 @@ namespace GothicClock
                 else
                 {
                     widget.AnimateHide();
-                }
-                if (btnHeaderStatus != null)
-                {
-                    btnHeaderStatus.Content = "Widget: OFF";
-                    btnHeaderStatus.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 77, 109));
-                    btnHeaderStatus.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 10, 18));
-                    btnHeaderStatus.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 24, 38));
                 }
             }
         }
@@ -2635,6 +2826,73 @@ namespace GothicClock
             btn.Click += delegate {
                 sliderMasterScale.Value = scale;
             };
+            return btn;
+        }
+
+        private void SwitchTab(string tabName)
+        {
+            if (tabName == "Settings")
+            {
+                if (scrollSettings != null) scrollSettings.Visibility = Visibility.Visible;
+                if (scrollMods != null) scrollMods.Visibility = Visibility.Collapsed;
+                UpdatePillTabVisual(btnTabSettings, true);
+                UpdatePillTabVisual(btnTabMods, false);
+            }
+            else
+            {
+                if (scrollSettings != null) scrollSettings.Visibility = Visibility.Collapsed;
+                if (scrollMods != null) scrollMods.Visibility = Visibility.Visible;
+                UpdatePillTabVisual(btnTabSettings, false);
+                UpdatePillTabVisual(btnTabMods, true);
+            }
+        }
+
+        private void UpdatePillTabVisual(System.Windows.Controls.Button btn, bool isActive)
+        {
+            if (btn == null) return;
+            if (isActive)
+            {
+                btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+                btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 240, 255));
+                btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(45, 0, 240, 255));
+            }
+            else
+            {
+                btn.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(60, 24, 38));
+                btn.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(142, 117, 130));
+                btn.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(18, 9, 16));
+            }
+        }
+
+        private System.Windows.Controls.Button CreatePillTab(string text, bool isActive)
+        {
+            System.Windows.Controls.Button btn = new System.Windows.Controls.Button();
+            btn.Content = text;
+            btn.Height = 24;
+            btn.Margin = new Thickness(0, 0, 8, 0);
+            btn.Padding = new Thickness(14, 0, 14, 0);
+            btn.FontFamily = new System.Windows.Media.FontFamily("Consolas, monospace");
+            btn.FontSize = 11;
+            btn.FontWeight = FontWeights.Bold;
+            btn.Cursor = System.Windows.Input.Cursors.Hand;
+            btn.BorderThickness = new Thickness(1);
+
+            ControlTemplate template = new ControlTemplate(typeof(System.Windows.Controls.Button));
+            FrameworkElementFactory borderFactory = new FrameworkElementFactory(typeof(Border));
+            borderFactory.Name = "pillBorder";
+            borderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(12));
+            borderFactory.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            borderFactory.SetBinding(Border.BorderBrushProperty, new System.Windows.Data.Binding("BorderBrush") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+            borderFactory.SetBinding(Border.BorderThicknessProperty, new System.Windows.Data.Binding("BorderThickness") { RelativeSource = new System.Windows.Data.RelativeSource(System.Windows.Data.RelativeSourceMode.TemplatedParent) });
+
+            FrameworkElementFactory contentFactory = new FrameworkElementFactory(typeof(ContentPresenter));
+            contentFactory.SetValue(ContentPresenter.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
+            contentFactory.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            borderFactory.AppendChild(contentFactory);
+            template.VisualTree = borderFactory;
+            btn.Template = template;
+
+            UpdatePillTabVisual(btn, isActive);
             return btn;
         }
 
@@ -2809,6 +3067,8 @@ namespace GothicClock
                             else if (k == "ColonStyle") widget.ColonStyle = v;
                             else if (k == "ShowDivider") widget.ShowDivider = bool.Parse(v);
                             else if (k == "ShowGlass") widget.ShowGlassBackplate = bool.Parse(v);
+                            else if (k == "ShowCyberHud") widget.ShowCyberHud = bool.Parse(v);
+                            else if (k == "ShowTelemetry") widget.ShowTelemetryBar = bool.Parse(v);
                             else if (k == "EnableCloseAnim") EnableCloseAnimation = bool.Parse(v);
                         }
                     }
@@ -2860,6 +3120,8 @@ namespace GothicClock
 
             toggleDivider.IsChecked = widget.ShowDivider;
             toggleGlass.IsChecked = widget.ShowGlassBackplate;
+            if (toggleCyberHud != null) toggleCyberHud.IsChecked = widget.ShowCyberHud;
+            if (toggleTelemetry != null) toggleTelemetry.IsChecked = widget.ShowTelemetryBar;
             if (toggleCloseAnimation != null) toggleCloseAnimation.IsChecked = EnableCloseAnimation;
 
             toggleStayDesktop.IsChecked = widget.StayOnDesktop;
@@ -2903,6 +3165,8 @@ namespace GothicClock
                     sw.WriteLine("ColonStyle=" + widget.ColonStyle);
                     sw.WriteLine("ShowDivider=" + widget.ShowDivider);
                     sw.WriteLine("ShowGlass=" + widget.ShowGlassBackplate);
+                    sw.WriteLine("ShowCyberHud=" + widget.ShowCyberHud);
+                    sw.WriteLine("ShowTelemetry=" + widget.ShowTelemetryBar);
                     sw.WriteLine("EnableCloseAnim=" + EnableCloseAnimation);
                 }
             }
